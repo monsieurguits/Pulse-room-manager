@@ -135,17 +135,26 @@ export async function sendCommand(options: SendCommandOptions): Promise<LovenseC
   if (options.strength) body.strength = options.strength;
 
   const directEndpoint = `https://${options.domain}:${options.httpsPort}/command`;
-  let res = await postCommand(directEndpoint, body).catch(() => null);
+  const endpoints = process.env.VERCEL
+    ? [LOVENSE_CLOUD_COMMAND_ENDPOINT]
+    : [directEndpoint, LOVENSE_CLOUD_COMMAND_ENDPOINT];
 
-  // On Vercel, domains like 192-168-x-x.lovense.club can resolve to a private LAN
-  // address that the serverless function cannot reach. The Lovense cloud endpoint is
-  // the fallback for hosted server-side commands.
-  if (!res) {
-    res = await postCommand(LOVENSE_CLOUD_COMMAND_ENDPOINT, body).catch((error) => {
-      throw new Error(
-        `Impossible de joindre Lovense depuis le serveur (${(error as Error).message || 'fetch failed'}).`
-      );
+  let res: Response | null = null;
+  let lastError: unknown = null;
+
+  for (const endpoint of endpoints) {
+    const timeoutMs = endpoint === directEndpoint ? 700 : 4000;
+    res = await postCommand(endpoint, body, timeoutMs).catch((error) => {
+      lastError = error;
+      return null;
     });
+    if (res) break;
+  }
+
+  if (!res) {
+    throw new Error(
+      `Impossible de joindre Lovense depuis le serveur (${(lastError as Error | null)?.message || 'fetch failed'}).`
+    );
   }
 
   if (!res.ok) {
@@ -161,11 +170,12 @@ export async function sendCommand(options: SendCommandOptions): Promise<LovenseC
   };
 }
 
-function postCommand(endpoint: string, body: Record<string, unknown>) {
+function postCommand(endpoint: string, body: Record<string, unknown>, timeoutMs: number) {
   return fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
     cache: 'no-store',
+    signal: AbortSignal.timeout(timeoutMs),
   });
 }
