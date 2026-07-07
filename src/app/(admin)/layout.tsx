@@ -19,8 +19,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="flex min-h-screen">
       <aside className="hidden w-64 shrink-0 border-r border-base-800 bg-base-900 p-5 md:block">
         <div className="mb-8 flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-accent-500 shadow-glow" />
-          <span className="text-lg font-bold tracking-tight">Pulse Room Manager</span>
+          <img src="/pulseroom-mark-transparent.png" alt="" className="h-10 w-10 object-contain" />
+          <span className="text-lg font-bold tracking-[0.18em] text-neutral-50">PULSEROOM</span>
         </div>
         <nav className="flex flex-col gap-1">
           {nav.map((item) => (
