@@ -7,6 +7,7 @@ import {
   destroyAdminSession,
   ensureInitialOwner,
   hashPassword,
+  LEGAL_TERMS_VERSION,
   requireAdmin,
   verifyPassword,
 } from '@/lib/auth';
@@ -30,6 +31,7 @@ const passwordSchema = z
 
 export type LoginFormState = { error?: string };
 export type PasswordFormState = { errors?: Record<string, string[]>; success?: boolean };
+export type LegalAcceptanceState = { error?: string };
 
 export async function loginAdmin(_prev: LoginFormState, formData: FormData): Promise<LoginFormState> {
   await ensureInitialOwner();
@@ -52,6 +54,10 @@ export async function loginAdmin(_prev: LoginFormState, formData: FormData): Pro
   }
 
   await createAdminSession(user.id);
+  if (user.role === 'MODEL' && user.legalAcceptedVersion !== LEGAL_TERMS_VERSION) {
+    redirect('/legal/accept');
+  }
+
   redirect('/dashboard');
 }
 
@@ -87,4 +93,27 @@ export async function changeOwnPassword(_prev: PasswordFormState, formData: Form
 
   await createAdminSession(admin.id);
   return { success: true };
+}
+
+export async function acceptLegalTerms(_prev: LegalAcceptanceState, formData: FormData): Promise<LegalAcceptanceState> {
+  const admin = await requireAdmin();
+  const accepted = formData.get('accepted') === 'on';
+
+  if (admin.role !== 'MODEL') {
+    redirect('/dashboard');
+  }
+
+  if (!accepted) {
+    return { error: 'Vous devez cocher la case pour continuer.' };
+  }
+
+  await db.adminUser.update({
+    where: { id: admin.id },
+    data: {
+      legalAcceptedAt: new Date(),
+      legalAcceptedVersion: LEGAL_TERMS_VERSION,
+    },
+  });
+
+  redirect('/dashboard');
 }

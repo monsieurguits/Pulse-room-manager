@@ -4,7 +4,12 @@ import { redirect } from 'next/navigation';
 import type { AdminUser } from '@prisma/client';
 import { db } from '@/lib/db';
 
-export type CurrentAdmin = Pick<AdminUser, 'id' | 'email' | 'name' | 'role' | 'active'>;
+export const LEGAL_TERMS_VERSION = '2026-07-07';
+
+export type CurrentAdmin = Pick<
+  AdminUser,
+  'id' | 'email' | 'name' | 'role' | 'active' | 'legalAcceptedAt' | 'legalAcceptedVersion'
+>;
 
 const SESSION_COOKIE = 'pulse_admin_session';
 const SESSION_DAYS = 14;
@@ -103,6 +108,8 @@ export async function getCurrentAdmin(): Promise<CurrentAdmin | null> {
     name: session.user.name,
     role: session.user.role,
     active: session.user.active,
+    legalAcceptedAt: session.user.legalAcceptedAt,
+    legalAcceptedVersion: session.user.legalAcceptedVersion,
   };
 }
 
@@ -116,6 +123,10 @@ export async function requireOwner(): Promise<CurrentAdmin> {
   const admin = await requireAdmin();
   if (admin.role !== 'OWNER') redirect('/dashboard');
   return admin;
+}
+
+export function hasAcceptedCurrentLegalTerms(admin: CurrentAdmin): boolean {
+  return admin.role !== 'MODEL' || admin.legalAcceptedVersion === LEGAL_TERMS_VERSION;
 }
 
 export function memberOwnerWhere(admin: CurrentAdmin) {

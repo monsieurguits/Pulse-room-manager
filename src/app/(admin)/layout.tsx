@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { LayoutDashboard, Settings, User, UserCog, Users } from 'lucide-react';
-import { requireAdmin } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { hasAcceptedCurrentLegalTerms, requireAdmin } from '@/lib/auth';
 import { logoutAdmin } from '@/server-actions/auth';
 
 const NAV = [
@@ -13,6 +14,10 @@ const NAV = [
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const admin = await requireAdmin();
+  if (!hasAcceptedCurrentLegalTerms(admin)) {
+    redirect('/legal/accept');
+  }
+
   const nav = NAV.filter((item) => !item.ownerOnly || admin.role === 'OWNER');
 
   return (
