@@ -22,7 +22,11 @@ export function verifyPassword(password: string, stored: string): boolean {
     .pbkdf2Sync(password, salt, Number(iterationsRaw), 32, 'sha256')
     .toString('hex');
 
-  return crypto.timingSafeEqual(Buffer.from(candidate, 'hex'), Buffer.from(hash, 'hex'));
+  const candidateBuffer = Buffer.from(candidate, 'hex');
+  const storedBuffer = Buffer.from(hash, 'hex');
+  if (candidateBuffer.length !== storedBuffer.length) return false;
+
+  return crypto.timingSafeEqual(candidateBuffer, storedBuffer);
 }
 
 export async function ensureInitialOwner(): Promise<void> {

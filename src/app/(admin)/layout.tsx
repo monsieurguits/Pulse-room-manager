@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { LayoutDashboard, Users, Settings, UserCog } from 'lucide-react';
+import { LayoutDashboard, Settings, User, UserCog, Users } from 'lucide-react';
 import { requireAdmin } from '@/lib/auth';
 import { logoutAdmin } from '@/server-actions/auth';
 
@@ -7,6 +7,7 @@ const NAV = [
   { href: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/members', label: 'Membres', icon: Users },
   { href: '/models', label: 'Modèles', icon: UserCog, ownerOnly: true },
+  { href: '/dashboard/account', label: 'Compte', icon: User },
   { href: '/dashboard/settings', label: 'Paramètres', icon: Settings, ownerOnly: true },
 ];
 
