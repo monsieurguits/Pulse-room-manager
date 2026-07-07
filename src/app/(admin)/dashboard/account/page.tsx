@@ -120,6 +120,10 @@ export default async function AccountPage() {
                 <FileText size={17} />
                 Guide modèle PDF
               </a>
+              <a href="/manuel-complet-pulseroom.pdf" className="btn-secondary justify-center" target="_blank" rel="noreferrer">
+                <FileText size={17} />
+                Manuel complet PDF
+              </a>
             </div>
           </div>
         </section>
