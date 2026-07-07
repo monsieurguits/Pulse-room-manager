@@ -1,0 +1,124 @@
+// Pulse Room Manager - Schéma Prisma
+// Base de données SQLite - production ready
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Un membre géré par l'administrateur.
+/// Possède un jouet Lovense associé et un crédit hebdomadaire de contrôle.
+model Member {
+  id        String   @id @default(cuid())
+  username  String
+  platform  String // ex: "OnlyFans", "Twitch", "Chaturbate", "Cam4", "Stripchat"
+  qrImageUrl String?
+
+  // Accès public sécurisé
+  secureToken String @unique @default(cuid())
+
+  // Abonnement
+  memberSince DateTime?
+  startDate DateTime
+  endDate   DateTime
+  active    Boolean  @default(true)
+
+  // Système de crédit
+  weeklyCredit    Int // en secondes
+  remainingCredit Int // en secondes
+  lastReset       DateTime @default(now())
+
+  // Etat de contrôle en cours
+  isControlling Boolean @default(false)
+
+  // Acceptation obligatoire des conditions avant le premier accès au contrôle
+  termsAcceptedAt DateTime?
+
+  // Intégration Lovense (Standard API / Standard Socket API)
+  lovenseUserId String? // identifiant utilisateur Lovense (uid) retourné par l'API
+  toyId         String?
+  toyName       String?
+  toyType       String?
+  toysJson      String?
+  battery       Int?
+  deviceDomain  String? // domaine renvoyé par /api/lovense/pair (httpUrl / wsUrl host)
+  httpsPort     Int?
+  wsPort        Int?
+  connected     Boolean @default(false)
+
+  sessions Session[]
+  tipCommands TipCommand[]
+
+  createdAt DateTime @updatedAt @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([secureToken])
+  @@index([active])
+}
+
+/// Une session de contrôle (une période Start -> Stop).
+model Session {
+  id        String    @id @default(cuid())
+  memberId  String
+  member    Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  active    Boolean   @default(true)
+
+  duration       Int @default(0) // secondes écoulées, mis à jour à l'arrêt
+  creditUsed     Int @default(0) // secondes débitées (une seule fois)
+  creditRemaining Int // crédit du membre au moment de la création de la session
+  controlClientId String? // navigateur qui possède le contrôle pendant cette session
+
+  createdAt DateTime @default(now())
+
+  @@index([memberId])
+  @@index([active])
+}
+
+/// Commande Lovense déclenchée par un tip externe.
+/// Si un membre contrôle déjà le jouet, elle attend la fin de la session.
+model TipCommand {
+  id        String @id @default(cuid())
+  memberId  String
+  member    Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  status String @default("pending") // pending | running | completed | failed
+  type   String @default("vibrate") // vibrate | pattern | preset | function
+
+  level    Int?
+  timeSec  Int @default(5)
+  action   String?
+  rule     String?
+  strength String?
+  preset   String?
+
+  source    String?
+  amount    Int?
+  message   String?
+  error     String?
+  startedAt DateTime?
+  completedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([memberId])
+  @@index([status, createdAt])
+}
+
+/// Paramètres globaux de l'application (singleton, id fixe = "settings").
+model Settings {
+  id String @id @default("settings")
+
+  developerToken  String // Lovense Developer Token - JAMAIS envoyé au client
+  callbackUrl     String // URL de callback pour l'API Lovense (qrcode / device pairing)
+  heartbeatSeconds Int   @default(30)
+  applicationName String @default("Pulse Room Manager")
+  domain          String // domaine public de déploiement (utilisé pour générer les liens)
+
+  updatedAt DateTime @updatedAt
+}

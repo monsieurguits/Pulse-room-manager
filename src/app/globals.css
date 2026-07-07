@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply bg-base-950 text-neutral-100;
+  }
+  body {
+    @apply bg-base-950 antialiased;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-base-700 bg-base-900/80 backdrop-blur-sm shadow-lg;
+  }
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-accent-500 px-4 py-2.5
+      font-medium text-white shadow-glow transition-all hover:bg-accent-400 active:scale-[0.97]
+      disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-base-700 bg-base-850
+      px-4 py-2.5 font-medium text-neutral-200 transition-all hover:border-accent-600
+      hover:text-accent-400 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
+  .input-field {
+    @apply w-full rounded-xl border border-base-700 bg-base-850 px-3.5 py-2.5 text-sm text-neutral-100
+      outline-none transition-colors placeholder:text-neutral-500 focus:border-accent-500;
+  }
+  .intensity-slider {
+    --intensity-progress: 50%;
+    @apply h-10 cursor-pointer appearance-none bg-transparent disabled:cursor-not-allowed disabled:opacity-50;
+    touch-action: pan-y;
+  }
+  .intensity-slider::-webkit-slider-runnable-track {
+    height: 14px;
+    border-radius: 999px;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    background:
+      linear-gradient(90deg, #ff2d87 0 var(--intensity-progress), #16161b var(--intensity-progress) 100%);
+  }
+  .intensity-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 32px;
+    height: 32px;
+    margin-top: -10px;
+    border-radius: 999px;
+    border: 2px solid rgb(255 255 255 / 0.85);
+    background: #ff5fa2;
+    box-shadow: 0 0 24px rgb(255 45 135 / 0.45);
+  }
+  .intensity-slider::-moz-range-track {
+    height: 14px;
+    border-radius: 999px;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    background: #16161b;
+  }
+  .intensity-slider::-moz-range-progress {
+    height: 14px;
+    border-radius: 999px;
+    background: #ff2d87;
+  }
+  .intensity-slider::-moz-range-thumb {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    border: 2px solid rgb(255 255 255 / 0.85);
+    background: #ff5fa2;
+    box-shadow: 0 0 24px rgb(255 45 135 / 0.45);
+  }
+}

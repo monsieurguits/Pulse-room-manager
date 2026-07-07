@@ -1,0 +1,68 @@
+import { notFound } from 'next/navigation';
+import { db } from '@/lib/db';
+import { ControlPanel } from '@/components/control-panel';
+import { TermsAcceptancePanel } from '@/components/terms-acceptance-panel';
+import { getToys } from '@/lib/lovense/service';
+
+export const dynamic = 'force-dynamic';
+
+export default async function ControlPage({ params }: { params: Promise<{ secureToken: string }> }) {
+  const { secureToken } = await params;
+
+  const member = await db.member.findUnique({ where: { secureToken } });
+
+  if (!member) notFound();
+
+  if (!member.termsAcceptedAt) {
+    return (
+      <TermsAcceptancePanel
+        secureToken={secureToken}
+        username={member.username}
+        platform={member.platform}
+        weeklyCredit={member.weeklyCredit}
+      />
+    );
+  }
+
+  const activeSession = await db.session.findFirst({
+    where: { active: true },
+    orderBy: { startedAt: 'desc' },
+  });
+  const ownActiveSession = activeSession?.memberId === member.id ? activeSession : null;
+  const elapsedSeconds = ownActiveSession
+    // eslint-disable-next-line react-hooks/purity -- Server Component: initial elapsed time is request-time state.
+    ? Math.floor((Date.now() - ownActiveSession.startedAt.getTime()) / 1000)
+    : 0;
+
+  const toys = await getToys(member.id);
+  const now = new Date();
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+  return (
+    <ControlPanel
+      memberId={member.id}
+      secureToken={secureToken}
+      username={member.username}
+      platform={member.platform}
+      active={member.active}
+      toys={toys}
+      memberSince={member.memberSince?.toISOString() ?? member.createdAt.toISOString()}
+      subscriptionStartDate={member.startDate.toISOString()}
+      subscriptionEndDate={member.endDate.toISOString()}
+      currentMonthStartDate={currentMonthStart.toISOString()}
+      currentMonthEndDate={currentMonthEnd.toISOString()}
+      initial={{
+        remainingCredit: member.remainingCredit,
+        weeklyCredit: member.weeklyCredit,
+        elapsedSeconds,
+        isControlling: Boolean(activeSession),
+        canControl: false,
+        isWaiting: Boolean(activeSession),
+        connected: member.connected,
+        battery: member.battery,
+        lastMessage: null,
+      }}
+    />
+  );
+}

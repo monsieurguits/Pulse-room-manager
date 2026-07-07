@@ -1,0 +1,48 @@
+{
+  "name": "pulse-room-manager",
+  "version": "1.0.0",
+  "private": true,
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint . --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "ws": "tsx src/lib/websocket/server.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@prisma/client": "5.20.0",
+    "clsx": "2.1.1",
+    "date-fns": "3.6.0",
+    "lucide-react": "0.446.0",
+    "next": "^16.2.10",
+    "prisma": "5.20.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "recharts": "^3.9.2",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "2.5.2",
+    "ws": "^8.21.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "22.7.4",
+    "@types/react": "19.0.0",
+    "@types/react-dom": "19.0.0",
+    "@types/ws": "8.5.12",
+    "autoprefixer": "10.4.20",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "16.0.0",
+    "postcss": "^8.5.16",
+    "tailwindcss": "3.4.13",
+    "tsx": "4.19.1",
+    "typescript": "5.6.2",
+    "vitest": "2.1.1"
+  }
+}
