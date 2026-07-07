@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { connect } from '@/lib/lovense/service';
+import { assertAdminCanAccessMember } from '@/lib/auth';
 
 const bodySchema = z.object({ memberId: z.string().min(1) });
 
@@ -11,6 +12,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    await assertAdminCanAccessMember(parsed.data.memberId);
     const connected = await connect(parsed.data.memberId);
     return NextResponse.json({ connected });
   } catch (error) {

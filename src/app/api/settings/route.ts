@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
+import { requireOwner } from '@/lib/auth';
 
 const settingsSchema = z.object({
   developerToken: z.string().min(10),
@@ -11,6 +12,7 @@ const settingsSchema = z.object({
 });
 
 export async function GET() {
+  await requireOwner();
   const settings = await db.settings.findUnique({ where: { id: 'settings' } });
   if (!settings) {
     return NextResponse.json({ settings: null });
@@ -21,6 +23,7 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
+  await requireOwner();
   const parsed = settingsSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });

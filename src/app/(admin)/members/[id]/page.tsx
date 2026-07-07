@@ -7,17 +7,19 @@ import { MemberTierBadge } from '@/components/member-tier-badge';
 import { RecentSessionsTable } from '@/components/recent-sessions-table';
 import { formatDuration } from '@/lib/utils';
 import { CopySecureLinkButton } from '@/components/copy-secure-link-button';
+import { canAccessMember, requireAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export default async function MemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const admin = await requireAdmin();
   const { id } = await params;
   const member = await db.member.findUnique({
     where: { id },
     include: { sessions: { orderBy: { startedAt: 'desc' }, take: 50 } },
   });
 
-  if (!member) notFound();
+  if (!member || !canAccessMember(admin, member)) notFound();
 
   const status = deriveMemberStatus(member);
 

@@ -15,6 +15,9 @@ datasource db {
 /// Possède un jouet Lovense associé et un crédit hebdomadaire de contrôle.
 model Member {
   id        String   @id @default(cuid())
+  ownerId   String?
+  owner     AdminUser? @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
   username  String
   platform  String // ex: "OnlyFans", "Twitch", "Chaturbate", "Cam4", "Stripchat"
   qrImageUrl String?
@@ -59,6 +62,39 @@ model Member {
 
   @@index([secureToken])
   @@index([active])
+  @@index([ownerId])
+}
+
+/// Compte administrateur de plateforme.
+/// OWNER = toi, accès complet. MODEL = diffuseur, accès limité à ses membres.
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  role         String   @default("MODEL")
+  passwordHash String
+  active       Boolean  @default(true)
+
+  members  Member[]
+  sessions AdminSession[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+  @@index([active])
+}
+
+model AdminSession {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 /// Une session de contrôle (une période Start -> Stop).

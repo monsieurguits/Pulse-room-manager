@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { db } from '@/lib/db';
+import { requireOwner } from '@/lib/auth';
 
 const baseSettingsSchema = z.object({
   callbackUrl: z.string().url('URL de callback invalide.'),
@@ -14,10 +15,12 @@ const baseSettingsSchema = z.object({
 export type SettingsFormState = { errors?: Record<string, string[]>; success?: boolean };
 
 export async function getSettings() {
+  await requireOwner();
   return db.settings.findUnique({ where: { id: 'settings' } });
 }
 
 export async function updateSettings(_prev: SettingsFormState, formData: FormData): Promise<SettingsFormState> {
+  await requireOwner();
   const rawToken = formData.get('developerToken');
   const tokenProvided = typeof rawToken === 'string' && rawToken.trim().length > 0;
 

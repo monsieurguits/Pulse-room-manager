@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
+import { memberOwnerWhere, requireAdmin } from '@/lib/auth';
 
 const createSchema = z.object({
   username: z.string().min(2),
@@ -12,6 +13,7 @@ const createSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
+  const admin = await requireAdmin();
   const search = request.nextUrl.searchParams.get('search') ?? undefined;
   const page = Number(request.nextUrl.searchParams.get('page') ?? '1');
   const pageSize = Number(request.nextUrl.searchParams.get('pageSize') ?? '20');
@@ -23,8 +25,8 @@ export async function GET(request: NextRequest) {
   const sortDir = (request.nextUrl.searchParams.get('sortDir') ?? 'desc') as 'asc' | 'desc';
 
   const where = search
-    ? { username: { contains: search } }
-    : {};
+    ? { ...memberOwnerWhere(admin), username: { contains: search } }
+    : memberOwnerWhere(admin);
 
   const [members, total] = await Promise.all([
     db.member.findMany({
@@ -40,6 +42,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const admin = await requireAdmin();
   const parsed = createSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
@@ -48,6 +51,7 @@ export async function POST(request: NextRequest) {
   const member = await db.member.create({
     data: {
       ...parsed.data,
+      ownerId: admin.id,
       remainingCredit: parsed.data.weeklyCredit,
     },
   });

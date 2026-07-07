@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 import { db } from '@/lib/db';
 import { MembersTable } from '@/components/members-table';
 import { MembersFilters } from '@/components/members-filters';
+import { memberOwnerWhere, requireAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,12 +18,14 @@ interface SearchParams {
 const PAGE_SIZE = 10;
 
 export default async function MembersPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const admin = await requireAdmin();
   const params = await searchParams;
   const page = Math.max(1, Number(params.page ?? '1'));
   const sort = params.sort ?? 'createdAt';
   const dir = params.dir ?? 'desc';
 
   const where = {
+    ...memberOwnerWhere(admin),
     ...(params.q ? { username: { contains: params.q } } : {}),
     ...(params.status === 'active' ? { active: true } : {}),
     ...(params.status === 'suspended' ? { active: false } : {}),

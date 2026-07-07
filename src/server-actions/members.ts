@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { stopSession } from '@/lib/session-engine';
+import { canAccessMember, requireAdmin } from '@/lib/auth';
 
 const memberSchema = z.object({
   username: z.string().min(2, 'Le pseudo doit contenir au moins 2 caractères.'),
@@ -18,6 +19,7 @@ const memberSchema = z.object({
 export type MemberFormState = { errors?: Record<string, string[]>; success?: boolean };
 
 export async function createMember(_prev: MemberFormState, formData: FormData): Promise<MemberFormState> {
+  const admin = await requireAdmin();
   const parsed = memberSchema.safeParse({
     username: formData.get('username'),
     platform: formData.get('platform'),
@@ -37,6 +39,7 @@ export async function createMember(_prev: MemberFormState, formData: FormData): 
   await db.member.create({
     data: {
       ...rest,
+      ownerId: admin.id,
       weeklyCredit,
       remainingCredit: weeklyCredit,
     },
@@ -48,6 +51,12 @@ export async function createMember(_prev: MemberFormState, formData: FormData): 
 }
 
 export async function updateMember(memberId: string, _prev: MemberFormState, formData: FormData): Promise<MemberFormState> {
+  const admin = await requireAdmin();
+  const member = await db.member.findUnique({ where: { id: memberId }, select: { ownerId: true } });
+  if (!member || !canAccessMember(admin, member)) {
+    return { errors: { _form: ['Membre introuvable.'] } };
+  }
+
   const parsed = memberSchema.partial().safeParse({
     username: formData.get('username') || undefined,
     platform: formData.get('platform') || undefined,
@@ -78,6 +87,10 @@ export async function updateMember(memberId: string, _prev: MemberFormState, for
 }
 
 export async function deleteMember(memberId: string): Promise<void> {
+  const admin = await requireAdmin();
+  const member = await db.member.findUnique({ where: { id: memberId }, select: { ownerId: true } });
+  if (!member || !canAccessMember(admin, member)) return;
+
   await stopSession(memberId, 'manual').catch(() => undefined);
   await db.member.delete({ where: { id: memberId } });
   revalidatePath('/members');
@@ -85,6 +98,10 @@ export async function deleteMember(memberId: string): Promise<void> {
 }
 
 export async function suspendMember(memberId: string, suspend: boolean): Promise<void> {
+  const admin = await requireAdmin();
+  const member = await db.member.findUnique({ where: { id: memberId }, select: { ownerId: true } });
+  if (!member || !canAccessMember(admin, member)) return;
+
   if (suspend) {
     await stopSession(memberId, 'manual').catch(() => undefined);
   }
@@ -94,13 +111,20 @@ export async function suspendMember(memberId: string, suspend: boolean): Promise
 }
 
 export async function renewSubscription(memberId: string, newEndDate: Date): Promise<void> {
+  const admin = await requireAdmin();
+  const member = await db.member.findUnique({ where: { id: memberId }, select: { ownerId: true } });
+  if (!member || !canAccessMember(admin, member)) return;
+
   await db.member.update({ where: { id: memberId }, data: { endDate: newEndDate, active: true } });
   revalidatePath('/members');
   revalidatePath(`/members/${memberId}`);
 }
 
 export async function resetCredit(memberId: string): Promise<void> {
+  const admin = await requireAdmin();
   const member = await db.member.findUniqueOrThrow({ where: { id: memberId } });
+  if (!canAccessMember(admin, member)) return;
+
   await db.member.update({
     where: { id: memberId },
     data: { remainingCredit: member.weeklyCredit, lastReset: new Date() },
@@ -110,6 +134,10 @@ export async function resetCredit(memberId: string): Promise<void> {
 }
 
 export async function getMemberHistory(memberId: string) {
+  const admin = await requireAdmin();
+  const member = await db.member.findUnique({ where: { id: memberId }, select: { ownerId: true } });
+  if (!member || !canAccessMember(admin, member)) return [];
+
   return db.session.findMany({
     where: { memberId },
     orderBy: { startedAt: 'desc' },

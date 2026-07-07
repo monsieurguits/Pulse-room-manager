@@ -1,9 +1,11 @@
 import { getSettings } from '@/server-actions/settings';
 import { SettingsForm } from '@/components/settings-form';
+import { requireOwner } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SettingsPage() {
+  await requireOwner();
   const settings = await getSettings();
   // Le Developer Token ne quitte jamais le serveur : on ne transmet au
   // composant client qu'un indicateur booléen "un token existe déjà".

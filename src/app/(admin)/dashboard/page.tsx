@@ -4,11 +4,13 @@ import { getDashboardStats } from '@/lib/dashboard-queries';
 import { formatDuration } from '@/lib/utils';
 import { RecentSessionsTable } from '@/components/recent-sessions-table';
 import { WeeklyUsageChart } from '@/components/weekly-usage-chart';
+import { requireAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-  const stats = await getDashboardStats();
+  const admin = await requireAdmin();
+  const stats = await getDashboardStats(admin);
 
   return (
     <div className="flex flex-col gap-6">

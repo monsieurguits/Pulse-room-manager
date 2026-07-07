@@ -1,0 +1,68 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+import { hashPassword, requireOwner } from '@/lib/auth';
+import { db } from '@/lib/db';
+
+const modelSchema = z.object({
+  name: z.string().min(2, 'Nom requis.'),
+  email: z.string().email('Email invalide.'),
+  password: z.string().min(8, '8 caractères minimum.'),
+});
+
+export type ModelFormState = { errors?: Record<string, string[]>; success?: boolean };
+
+export async function createModelAdmin(_prev: ModelFormState, formData: FormData): Promise<ModelFormState> {
+  await requireOwner();
+
+  const parsed = modelSchema.safeParse({
+    name: formData.get('name'),
+    email: formData.get('email'),
+    password: formData.get('password'),
+  });
+
+  if (!parsed.success) {
+    return { errors: parsed.error.flatten().fieldErrors };
+  }
+
+  const email = parsed.data.email.toLowerCase().trim();
+  const existing = await db.adminUser.findUnique({ where: { email } });
+  if (existing) {
+    return { errors: { email: ['Un compte existe déjà avec cet email.'] } };
+  }
+
+  await db.adminUser.create({
+    data: {
+      name: parsed.data.name.trim(),
+      email,
+      role: 'MODEL',
+      passwordHash: hashPassword(parsed.data.password),
+    },
+  });
+
+  revalidatePath('/models');
+  return { success: true };
+}
+
+export async function setModelActive(modelId: string, active: boolean): Promise<void> {
+  await requireOwner();
+  await db.adminUser.update({
+    where: { id: modelId, role: 'MODEL' },
+    data: { active },
+  });
+  revalidatePath('/models');
+}
+
+export async function resetModelPassword(modelId: string, formData: FormData): Promise<void> {
+  await requireOwner();
+  const password = String(formData.get('password') ?? '');
+  if (password.length < 8) return;
+
+  await db.adminUser.update({
+    where: { id: modelId, role: 'MODEL' },
+    data: { passwordHash: hashPassword(password) },
+  });
+  await db.adminSession.deleteMany({ where: { userId: modelId } });
+  revalidatePath('/models');
+}

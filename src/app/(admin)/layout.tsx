@@ -1,13 +1,19 @@
 import Link from 'next/link';
-import { LayoutDashboard, Users, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, UserCog } from 'lucide-react';
+import { requireAdmin } from '@/lib/auth';
+import { logoutAdmin } from '@/server-actions/auth';
 
 const NAV = [
   { href: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/members', label: 'Membres', icon: Users },
-  { href: '/dashboard/settings', label: 'Paramètres', icon: Settings },
+  { href: '/models', label: 'Modèles', icon: UserCog, ownerOnly: true },
+  { href: '/dashboard/settings', label: 'Paramètres', icon: Settings, ownerOnly: true },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const admin = await requireAdmin();
+  const nav = NAV.filter((item) => !item.ownerOnly || admin.role === 'OWNER');
+
   return (
     <div className="flex min-h-screen">
       <aside className="hidden w-64 shrink-0 border-r border-base-800 bg-base-900 p-5 md:block">
@@ -16,7 +22,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <span className="text-lg font-bold tracking-tight">Pulse Room Manager</span>
         </div>
         <nav className="flex flex-col gap-1">
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -27,6 +33,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </Link>
           ))}
         </nav>
+        <div className="mt-8 border-t border-base-800 pt-5">
+          <p className="truncate text-sm font-semibold text-neutral-200">{admin.name}</p>
+          <p className="truncate text-xs text-neutral-500">{admin.email}</p>
+          <form action={logoutAdmin} className="mt-4">
+            <button className="btn-secondary w-full justify-center" type="submit">
+              Déconnexion
+            </button>
+          </form>
+        </div>
       </aside>
       <main className="flex-1 bg-base-950 p-6 md:p-8">{children}</main>
     </div>

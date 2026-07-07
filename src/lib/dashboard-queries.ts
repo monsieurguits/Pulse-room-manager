@@ -1,7 +1,10 @@
 import { db } from '@/lib/db';
+import { memberOwnerWhere, type CurrentAdmin } from '@/lib/auth';
 import type { DashboardStats } from '@/types';
 
-export async function getDashboardStats(): Promise<DashboardStats> {
+export async function getDashboardStats(admin: CurrentAdmin): Promise<DashboardStats> {
+  const memberWhere = memberOwnerWhere(admin);
+  const sessionWhere = admin.role === 'OWNER' ? {} : { member: { ownerId: admin.id } };
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
 
@@ -9,12 +12,12 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   startOfWeek.setDate(startOfWeek.getDate() - 7);
 
   const [totalMembers, activeControls, members, todaySessions, weekSessions, recentSessions] = await Promise.all([
-    db.member.count(),
-    db.member.count({ where: { isControlling: true } }),
-    db.member.findMany({ select: { remainingCredit: true } }),
-    db.session.findMany({ where: { startedAt: { gte: startOfToday } }, select: { duration: true, active: true, startedAt: true } }),
-    db.session.findMany({ where: { startedAt: { gte: startOfWeek } }, select: { duration: true, active: true, startedAt: true } }),
-    db.session.findMany({ orderBy: { startedAt: 'desc' }, take: 10 }),
+    db.member.count({ where: memberWhere }),
+    db.member.count({ where: { ...memberWhere, isControlling: true } }),
+    db.member.findMany({ where: memberWhere, select: { remainingCredit: true } }),
+    db.session.findMany({ where: { ...sessionWhere, startedAt: { gte: startOfToday } }, select: { duration: true, active: true, startedAt: true } }),
+    db.session.findMany({ where: { ...sessionWhere, startedAt: { gte: startOfWeek } }, select: { duration: true, active: true, startedAt: true } }),
+    db.session.findMany({ where: sessionWhere, orderBy: { startedAt: 'desc' }, take: 10 }),
   ]);
 
   const averageCredit = members.length
