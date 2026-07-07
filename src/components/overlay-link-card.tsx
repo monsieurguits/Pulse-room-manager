@@ -1,19 +1,20 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { Copy, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function OverlayLinkCard({ token }: { token: string }) {
   const overlayPath = `/overlay/obs?token=${token}`;
   const previewHref = overlayPath;
-  const displayUrl = useMemo(() => {
-    if (typeof window === 'undefined') return overlayPath;
-    return `${window.location.origin}${overlayPath}`;
+  const [displayUrl, setDisplayUrl] = useState(overlayPath);
+
+  useEffect(() => {
+    setDisplayUrl(`${window.location.origin}${overlayPath}`);
   }, [overlayPath]);
 
   function copyOverlayLink() {
-    navigator.clipboard.writeText(displayUrl);
+    navigator.clipboard.writeText(`${window.location.origin}${overlayPath}`);
     toast.success('Lien overlay OBS copié.');
   }
 
