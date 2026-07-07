@@ -33,9 +33,9 @@ export async function startSession(memberId: string, controlClientId?: string) {
 
   if (activeSession) {
     const ownsActiveSession = activeSession.memberId === memberId && activeSession.controlClientId === controlClientId;
-    const canClaimLegacySession = activeSession.memberId === memberId && !activeSession.controlClientId && controlClientId;
+    const canClaimOwnSession = activeSession.memberId === memberId && controlClientId;
 
-    if (canClaimLegacySession) {
+    if (canClaimOwnSession && !ownsActiveSession) {
       return db.session.update({
         where: { id: activeSession.id },
         data: { controlClientId },
@@ -121,7 +121,7 @@ export async function assertSessionController(memberId: string, controlClientId?
   });
 
   if (!session) throw new Error('Aucune session de contrôle active.');
-  if (!session.controlClientId && controlClientId) {
+  if (controlClientId && session.memberId === memberId && session.controlClientId !== controlClientId) {
     await db.session.update({ where: { id: session.id }, data: { controlClientId } });
     return;
   }
@@ -152,32 +152,47 @@ type Publisher = (memberId: string | null, payload: unknown) => void;
  * automatiquement le contrôle si le crédit atteint zéro.
  */
 export async function tickAllActiveSessions(publish: Publisher): Promise<void> {
+  await syncActiveSessions(publish);
+}
+
+export async function syncActiveSessions(publish?: Publisher): Promise<void> {
   const controllingMembers = await db.member.findMany({ where: { isControlling: true } });
 
   for (const member of controllingMembers) {
-    if (member.remainingCredit <= 0) {
-      await stopSession(member.id, 'credit-exhausted');
-      publish(member.id, { type: 'session-stopped', memberId: member.id, reason: 'credit-exhausted' });
-      continue;
-    }
-
-    const newRemaining = member.remainingCredit - 1;
-
     const session = await db.session.findFirst({
       where: { memberId: member.id, active: true },
       orderBy: { startedAt: 'desc' },
     });
 
+    if (!session || member.remainingCredit <= 0) {
+      await stopSession(member.id, 'credit-exhausted');
+      publish?.(member.id, { type: 'session-stopped', memberId: member.id, reason: 'credit-exhausted' });
+      continue;
+    }
+
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - session.startedAt.getTime()) / 1000));
+    const targetCreditUsed = Math.min(session.creditRemaining, elapsedSeconds);
+    const creditDelta = Math.max(0, targetCreditUsed - session.creditUsed);
+
+    if (creditDelta === 0) {
+      publish?.(member.id, {
+        type: 'credit-tick',
+        memberId: member.id,
+        remainingCredit: member.remainingCredit,
+        elapsedSeconds,
+        isControlling: true,
+      });
+      continue;
+    }
+
+    const newRemaining = Math.max(0, member.remainingCredit - creditDelta);
+
     await db.$transaction([
       db.member.update({ where: { id: member.id }, data: { remainingCredit: newRemaining } }),
-      ...(session
-        ? [db.session.update({ where: { id: session.id }, data: { creditUsed: { increment: 1 } } })]
-        : []),
+      db.session.update({ where: { id: session.id }, data: { creditUsed: { increment: creditDelta } } }),
     ]);
 
-    const elapsedSeconds = session ? Math.floor((Date.now() - session.startedAt.getTime()) / 1000) : 0;
-
-    publish(member.id, {
+    publish?.(member.id, {
       type: 'credit-tick',
       memberId: member.id,
       remainingCredit: newRemaining,
@@ -187,7 +202,7 @@ export async function tickAllActiveSessions(publish: Publisher): Promise<void> {
 
     if (newRemaining <= 0) {
       await stopSession(member.id, 'credit-exhausted');
-      publish(member.id, { type: 'session-stopped', memberId: member.id, reason: 'credit-exhausted' });
+      publish?.(member.id, { type: 'session-stopped', memberId: member.id, reason: 'credit-exhausted' });
     }
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface RealtimeMemberState {
   remainingCredit: number;
@@ -25,9 +25,34 @@ export function useRealtimeMember(memberId: string, initial: RealtimeMemberState
   const [reconnectAttempt, setReconnectAttempt] = useState(0);
   const socketRef = useRef<WebSocket | null>(null);
 
+  const refreshOwnership = useCallback(async () => {
+    if (!controlClientId) return;
+
+    const params = new URLSearchParams({ memberId, controlClientId });
+    const response = await fetch(`/api/control/status?${params.toString()}`, { cache: 'no-store' });
+    if (!response.ok) return;
+
+    const payload = await response.json();
+    setState((prev) => ({
+      ...prev,
+      remainingCredit: payload.remainingCredit as number,
+      elapsedSeconds: payload.elapsedSeconds as number,
+      isControlling: payload.isControlling as boolean,
+      canControl: payload.canControl as boolean,
+      isWaiting: payload.isWaiting as boolean,
+      connected: payload.connected as boolean,
+      battery: payload.battery as number | null,
+    }));
+  }, [memberId, controlClientId]);
+
   useEffect(() => {
+    const configuredWsPort = process.env.NEXT_PUBLIC_WS_PORT;
+    const isLocalHost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+    const wsPort = configuredWsPort ?? (isLocalHost ? '4001' : null);
+
+    if (!wsPort) return;
+
     let shouldReconnect = true;
-    const wsPort = process.env.NEXT_PUBLIC_WS_PORT ?? '4001';
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const host = window.location.hostname;
     const socket = new WebSocket(`${protocol}://${host}:${wsPort}/`);
@@ -104,30 +129,21 @@ export function useRealtimeMember(memberId: string, initial: RealtimeMemberState
 
     let cancelled = false;
 
-    async function refreshOwnership() {
-      const params = new URLSearchParams({ memberId, controlClientId: controlClientId! });
-      const response = await fetch(`/api/control/status?${params.toString()}`);
-      if (!response.ok || cancelled) return;
-
-      const payload = await response.json();
-      setState((prev) => ({
-        ...prev,
-        remainingCredit: payload.remainingCredit as number,
-        elapsedSeconds: payload.elapsedSeconds as number,
-        isControlling: payload.isControlling as boolean,
-        canControl: payload.canControl as boolean,
-        isWaiting: payload.isWaiting as boolean,
-        connected: payload.connected as boolean,
-        battery: payload.battery as number | null,
-      }));
+    async function refreshIfMounted() {
+      if (cancelled) return;
+      await refreshOwnership();
     }
 
-    refreshOwnership().catch(() => undefined);
+    refreshIfMounted().catch(() => undefined);
+    const intervalId = window.setInterval(() => {
+      refreshIfMounted().catch(() => undefined);
+    }, 1500);
 
     return () => {
       cancelled = true;
+      window.clearInterval(intervalId);
     };
-  }, [memberId, controlClientId]);
+  }, [controlClientId, refreshOwnership]);
 
-  return state;
+  return { ...state, refresh: refreshOwnership };
 }

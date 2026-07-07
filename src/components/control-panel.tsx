@@ -138,6 +138,8 @@ export function ControlPanel({
       window.localStorage.setItem(storageKey, next);
     }
 
+    // The client id is persisted in localStorage, so it must be hydrated after mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setControlClientId(next);
   }, [secureToken]);
 
@@ -153,7 +155,6 @@ export function ControlPanel({
       frameId = window.requestAnimationFrame(animate);
     };
 
-    setVisualPosition(0);
     frameId = window.requestAnimationFrame(animate);
 
     return () => window.cancelAnimationFrame(frameId);
@@ -182,6 +183,7 @@ export function ControlPanel({
     startTransition(async () => {
       try {
         await post(path, body);
+        await realtime.refresh();
       } catch (error) {
         toast.error((error as Error).message);
       }
@@ -193,6 +195,7 @@ export function ControlPanel({
       try {
         await post('/api/control/start');
         await post('/api/lovense/vibrate', { level: intensity, timeSec: 0 });
+        await realtime.refresh();
         setPaused(false);
       } catch (error) {
         toast.error((error as Error).message);
@@ -286,10 +289,12 @@ export function ControlPanel({
       try {
         if (!effectivePaused) {
           await post('/api/lovense/stop');
+          await realtime.refresh();
           setPaused(true);
           toast.info('Contrôle en pause.');
         } else {
           await post('/api/lovense/vibrate', { level: intensity, timeSec: 0 });
+          await realtime.refresh();
           setActivePattern(null);
           setPaused(false);
           toast.info('Contrôle repris.');
@@ -544,14 +549,14 @@ export function ControlPanel({
                   </>
                 ) : (
                   <button disabled className="btn-secondary col-span-2 min-h-12 cursor-not-allowed opacity-70">
-                    Liste d'attente
+                    Liste d&apos;attente
                   </button>
                 )}
               </div>
 
               {realtime.isWaiting && (
                 <p className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-center text-sm text-amber-200">
-                  Vous êtes sur la liste d'attente. Vous pourrez démarrer dès que le contrôle en cours sera arrêté.
+                  Vous êtes sur la liste d&apos;attente. Vous pourrez démarrer dès que le contrôle en cours sera arrêté.
                 </p>
               )}
 

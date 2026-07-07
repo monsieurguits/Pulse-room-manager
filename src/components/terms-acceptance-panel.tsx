@@ -67,7 +67,7 @@ export function TermsAcceptancePanel({ secureToken, username, platform, weeklyCr
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-neutral-50">Conditions de sécurité, confidentialité et jeu</h2>
             <p className="mt-2 text-sm leading-6 text-neutral-400">
-              Avant d'accéder à votre espace membre, merci de lire et d'accepter les règles ci-dessous.
+              Avant d&apos;accéder à votre espace membre, merci de lire et d&apos;accepter les règles ci-dessous.
             </p>
           </div>
 
@@ -93,7 +93,7 @@ export function TermsAcceptancePanel({ secureToken, username, platform, weeklyCr
             <div className="flex gap-3">
               <AlertTriangle size={20} className="mt-0.5 shrink-0 text-amber-300" />
               <p className="text-sm leading-6 text-amber-100">
-                Toute utilisation abusive, tentative de contournement, partage non autorisé du lien ou comportement non conforme peut entraîner la suspension de l'accès.
+                Toute utilisation abusive, tentative de contournement, partage non autorisé du lien ou comportement non conforme peut entraîner la suspension de l&apos;accès.
               </p>
             </div>
           </div>
@@ -107,7 +107,7 @@ export function TermsAcceptancePanel({ secureToken, username, platform, weeklyCr
               required
             />
             <span className="text-sm leading-6 text-neutral-300">
-              Je confirme avoir lu et compris les conditions de sécurité, de confidentialité et de jeu. J'accepte d'utiliser ce service de manière responsable, respectueuse et sécurisée.
+              Je confirme avoir lu et compris les conditions de sécurité, de confidentialité et de jeu. J&apos;accepte d&apos;utiliser ce service de manière responsable, respectueuse et sécurisée.
             </span>
           </label>
 

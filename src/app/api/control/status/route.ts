@@ -1,7 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { db } from '@/lib/db';
+import { syncActiveSessions } from '@/lib/session-engine';
 
 export async function GET(request: NextRequest) {
+  await syncActiveSessions();
+
   const memberId = request.nextUrl.searchParams.get('memberId');
   const secureToken = request.nextUrl.searchParams.get('token');
   const controlClientId = request.nextUrl.searchParams.get('controlClientId');
@@ -26,7 +29,12 @@ export async function GET(request: NextRequest) {
     orderBy: { startedAt: 'desc' },
   });
 
-  if (activeSession && activeSession.memberId === member.id && !activeSession.controlClientId && controlClientId) {
+  if (
+    activeSession &&
+    activeSession.memberId === member.id &&
+    controlClientId &&
+    activeSession.controlClientId !== controlClientId
+  ) {
     activeSession = await db.session.update({
       where: { id: activeSession.id },
       data: { controlClientId },

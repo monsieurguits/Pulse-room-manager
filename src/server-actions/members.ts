@@ -31,7 +31,7 @@ export async function createMember(_prev: MemberFormState, formData: FormData): 
     return { errors: parsed.error.flatten().fieldErrors };
   }
 
-  const { weeklyCreditMinutes, memberSince, ...rest } = parsed.data;
+  const { weeklyCreditMinutes, ...rest } = parsed.data;
   const weeklyCredit = weeklyCreditMinutes * 60;
 
   await db.member.create({
