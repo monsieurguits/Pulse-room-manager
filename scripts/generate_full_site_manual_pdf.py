@@ -462,7 +462,7 @@ def page_account(c):
 def page_settings_models(c):
     page_bg(c)
     header(c, 12, "Paramètres et modèles")
-    page_title(c, "Paramètres Lovense et espace propriétaire", "Certaines pages sont réservées au propriétaire de la plateforme.")
+    page_title(c, "Paramètres et modèles", "Les réglages Lovense et la gestion des comptes modèles sont réservés au propriétaire de la plateforme.")
     card(c, M, 520, 248, 108, "Paramètres", "Nom application, Developer Token Lovense, Callback URL, heartbeat et domaine public.", CYAN, 1)
     card(c, M + 268, 520, 248, 108, "Enregistrer", "Sauvegarde les réglages Lovense. Le token n'est jamais renvoyé au navigateur.", ROSE, 2)
     card(c, M, 374, 248, 108, "Modèles", "Créer un compte modèle avec nom, email et mot de passe initial.", VIOLET, 3)
@@ -487,25 +487,9 @@ def page_settings_models(c):
     c.showPage()
 
 
-def page_deploy(c):
-    page_bg(c)
-    header(c, 13, "Mise en ligne")
-    page_title(c, "Vercel, Turso et déploiement", "Ces points évitent les erreurs les plus fréquentes après une mise en ligne.")
-    rows = [
-        ("Variables Vercel", "DATABASE_URL, DATABASE_AUTH_TOKEN, variables Lovense, secrets d'auth et domaine public."),
-        ("Migrations Turso", "Appliquer les migrations SQL avant d'utiliser une nouvelle fonctionnalité qui modifie la base."),
-        ("Build", "Le script npm run build régénère Prisma puis compile Next."),
-        ("Callback Lovense", "Le domaine public doit pointer vers /api/lovense/callback."),
-        ("Overlay production", "Les modèles doivent copier l'URL Vercel, pas l'URL localhost."),
-        ("Test final", "Créer un membre test, connecter le jouet, démarrer, stopper, vérifier l'overlay et un tip."),
-    ]
-    table(c, M, 640, W - 2 * M, rows, GREEN)
-    c.showPage()
-
-
 def page_security(c):
     page_bg(c)
-    header(c, 14, "Sécurité")
+    header(c, 13, "Sécurité")
     page_title(c, "Sécurité et bonnes pratiques", "PULSEROOM manipule des accès privés et des appareils connectés. Les règles ci-dessous sont essentielles.")
     items = [
         "Ne jamais partager un mot de passe admin avec un membre.",
@@ -524,13 +508,13 @@ def page_security(c):
 
 def page_checklist(c):
     page_bg(c)
-    header(c, 15, "Checklist")
+    header(c, 14, "Checklist")
     page_title(c, "Checklist avant live", "Une page à garder sous la main avant de lancer une diffusion.")
     sections = [
         ("Compte", ["Je suis connecté au bon compte modèle.", "Mon mot de passe est personnel.", "La page Compte ne montre aucune erreur."]),
         ("Membres", ["Le membre prévu est actif.", "Le crédit est correct.", "Le lien public a été testé."]),
         ("Lovense", ["Le jouet est allumé.", "Lovense Remote est connecté.", "Le statut PULSEROOM indique connecté."]),
-        ("OBS", ["La source navigateur overlay est ajoutée.", "Le lien utilisé est celui du domaine Vercel.", "L'overlay est placé sans masquer le contenu important."]),
+        ("OBS", ["La source navigateur overlay est ajoutée.", "Le lien utilisé est celui du site en ligne.", "L'overlay est placé sans masquer le contenu important."]),
     ]
     x_positions = [M, M + 268]
     y_positions = [500, 290]
@@ -564,7 +548,6 @@ def main():
     page_obs(c)
     page_account(c)
     page_settings_models(c)
-    page_deploy(c)
     page_security(c)
     page_checklist(c)
     c.save()
