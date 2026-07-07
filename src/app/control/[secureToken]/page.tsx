@@ -34,7 +34,7 @@ export default async function ControlPage({ params }: { params: Promise<{ secure
     ? Math.floor((Date.now() - ownActiveSession.startedAt.getTime()) / 1000)
     : 0;
 
-  const toys = await getToys(member.id);
+  const toys = await getToys(member.id).catch(() => []);
   const now = new Date();
   const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
