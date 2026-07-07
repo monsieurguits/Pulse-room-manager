@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { stop as stopToy } from '@/lib/lovense/service';
+import { createControlOverlayEvent } from '@/lib/overlay';
 
 /**
  * Moteur de session — unique responsable du débit du crédit.
@@ -67,6 +68,8 @@ export async function startSession(memberId: string, controlClientId?: string) {
     }),
   ]);
 
+  await createControlOverlayEvent(memberId, 'control-started').catch(() => undefined);
+
   return session;
 }
 
@@ -104,6 +107,8 @@ export async function stopSession(memberId: string, reason: 'manual' | 'credit-e
   } else {
     triggerPendingTipCommands();
   }
+
+  await createControlOverlayEvent(memberId, 'control-stopped').catch(() => undefined);
 
   return updatedSession;
 }

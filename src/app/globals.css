@@ -12,6 +12,28 @@
 }
 
 @layer components {
+  .login-animated-gradient {
+    background:
+      linear-gradient(
+        135deg,
+        rgba(255, 46, 109, 0.36) 0%,
+        rgba(126, 38, 255, 0.2) 30%,
+        rgba(0, 218, 255, 0.3) 62%,
+        rgba(5, 5, 9, 0.96) 100%
+      );
+    background-size: 180% 180%;
+    animation: loginGradientDrift 18s ease-in-out infinite alternate;
+  }
+
+  .login-ambient-glow {
+    background:
+      radial-gradient(circle at 26% 28%, rgba(255, 46, 109, 0.28), transparent 34%),
+      radial-gradient(circle at 76% 58%, rgba(0, 218, 255, 0.24), transparent 36%),
+      radial-gradient(circle at 50% 88%, rgba(139, 92, 246, 0.18), transparent 42%);
+    filter: blur(10px);
+    animation: loginGlowBreathe 14s ease-in-out infinite alternate;
+  }
+
   .card {
     @apply rounded-2xl border border-base-700 bg-base-900/80 backdrop-blur-sm shadow-lg;
   }
@@ -72,5 +94,34 @@
     border: 2px solid rgb(255 255 255 / 0.85);
     background: #ff5fa2;
     box-shadow: 0 0 24px rgb(255 45 135 / 0.45);
+  }
+}
+
+@keyframes loginGradientDrift {
+  0% {
+    background-position: 0% 45%;
+    transform: scale(1);
+  }
+  100% {
+    background-position: 100% 55%;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes loginGlowBreathe {
+  0% {
+    opacity: 0.72;
+    transform: translate3d(-1.5%, -1%, 0) scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(1.5%, 1%, 0) scale(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-animated-gradient,
+  .login-ambient-glow {
+    animation: none;
   }
 }

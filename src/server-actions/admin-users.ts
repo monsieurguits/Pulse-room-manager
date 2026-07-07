@@ -66,3 +66,27 @@ export async function resetModelPassword(modelId: string, formData: FormData): P
   await db.adminSession.deleteMany({ where: { userId: modelId } });
   revalidatePath('/models');
 }
+
+export async function deleteModelAdmin(modelId: string): Promise<void> {
+  const owner = await requireOwner();
+
+  const model = await db.adminUser.findUnique({
+    where: { id: modelId },
+    select: { id: true, role: true },
+  });
+
+  if (!model || model.role !== 'MODEL') return;
+
+  await db.$transaction([
+    db.member.updateMany({
+      where: { ownerId: modelId },
+      data: { ownerId: owner.id },
+    }),
+    db.adminSession.deleteMany({ where: { userId: modelId } }),
+    db.adminUser.delete({ where: { id: modelId } }),
+  ]);
+
+  revalidatePath('/models');
+  revalidatePath('/members');
+  revalidatePath('/dashboard');
+}

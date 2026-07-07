@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
+import { SiteTrustFooter } from '@/components/site-trust-footer';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -12,6 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr" className="dark">
       <body>
         {children}
+        <SiteTrustFooter />
         <Toaster theme="dark" position="top-right" richColors />
       </body>
     </html>

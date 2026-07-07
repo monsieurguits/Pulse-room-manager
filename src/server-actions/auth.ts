@@ -66,6 +66,13 @@ export async function logoutAdmin(): Promise<void> {
   redirect('/login');
 }
 
+export async function logoutAllAdminSessions(): Promise<void> {
+  const admin = await requireAdmin();
+  await db.adminSession.deleteMany({ where: { userId: admin.id } });
+  await destroyAdminSession();
+  redirect('/login');
+}
+
 export async function changeOwnPassword(_prev: PasswordFormState, formData: FormData): Promise<PasswordFormState> {
   const admin = await requireAdmin();
 

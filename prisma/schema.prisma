@@ -56,6 +56,7 @@ model Member {
 
   sessions Session[]
   tipCommands TipCommand[]
+  overlayEvents ControlOverlayEvent[]
 
   createdAt DateTime @updatedAt @default(now())
   updatedAt DateTime @updatedAt
@@ -76,9 +77,11 @@ model AdminUser {
   active       Boolean  @default(true)
   legalAcceptedAt DateTime?
   legalAcceptedVersion String?
+  overlayToken String? @unique
 
   members  Member[]
   sessions AdminSession[]
+  overlayEvents ControlOverlayEvent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -147,6 +150,25 @@ model TipCommand {
 
   @@index([memberId])
   @@index([status, createdAt])
+}
+
+/// Annonce affichée dans l'overlay OBS du modèle.
+model ControlOverlayEvent {
+  id       String @id @default(cuid())
+  adminId  String
+  admin    AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  type     String // control-started | control-stopped
+  message  String
+  username String
+  toyName  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([adminId, createdAt])
+  @@index([memberId])
 }
 
 /// Paramètres globaux de l'application (singleton, id fixe = "settings").
