@@ -1,10 +1,36 @@
-import { requireOwner } from '@/lib/auth';
+import { LEGAL_TERMS_VERSION, requireOwner } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { ModelForm } from '@/components/model-form';
 import { resetModelPassword, setModelActive } from '@/server-actions/admin-users';
 import { DeleteModelButton } from '@/components/delete-model-button';
 
 export const dynamic = 'force-dynamic';
+
+function isModelActivated(model: { legalAcceptedVersion: string | null; legalAcceptedAt: Date | null }) {
+  return model.legalAcceptedVersion === LEGAL_TERMS_VERSION && Boolean(model.legalAcceptedAt);
+}
+
+function formatActivationDate(date: Date | null) {
+  if (!date) return null;
+  return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+}
+
+function ActivationBadge({ model }: { model: { legalAcceptedVersion: string | null; legalAcceptedAt: Date | null } }) {
+  const activated = isModelActivated(model);
+
+  return (
+    <div className="flex flex-col gap-1">
+      {activated ? (
+        <span className="badge w-fit bg-cyan-400/15 text-cyan-200">Compte activé</span>
+      ) : (
+        <span className="badge w-fit bg-amber-400/15 text-amber-200">Activation en attente</span>
+      )}
+      <span className="text-xs text-neutral-500">
+        {activated ? `Validé le ${formatActivationDate(model.legalAcceptedAt)}` : 'Première connexion non finalisée'}
+      </span>
+    </div>
+  );
+}
 
 export default async function ModelsPage() {
   await requireOwner();
@@ -43,6 +69,9 @@ export default async function ModelsPage() {
             <p className="mt-4 rounded-xl border border-base-800 bg-base-950/70 px-3 py-2 text-sm text-neutral-400">
               Membres : <strong className="text-neutral-100">{model._count.members}</strong>
             </p>
+            <div className="mt-3 rounded-xl border border-base-800 bg-base-950/70 px-3 py-2">
+              <ActivationBadge model={model} />
+            </div>
             <div className="mt-4 grid gap-3">
               <form action={setModelActive.bind(null, model.id, !model.active)}>
                 <button className="btn-secondary w-full" type="submit">
@@ -77,6 +106,7 @@ export default async function ModelsPage() {
               <th className="px-4 py-3 font-medium">Email</th>
               <th className="px-4 py-3 font-medium">Membres</th>
               <th className="px-4 py-3 font-medium">Statut</th>
+              <th className="px-4 py-3 font-medium">Activation</th>
               <th className="px-4 py-3 font-medium text-right">Actions</th>
             </tr>
           </thead>
@@ -92,6 +122,9 @@ export default async function ModelsPage() {
                   ) : (
                     <span className="badge bg-base-800 text-neutral-400">Suspendu</span>
                   )}
+                </td>
+                <td className="px-4 py-3">
+                  <ActivationBadge model={model} />
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-2">
@@ -119,7 +152,7 @@ export default async function ModelsPage() {
             ))}
             {models.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-neutral-500">
+                <td colSpan={6} className="px-4 py-8 text-center text-neutral-500">
                   Aucun compte modèle pour le moment.
                 </td>
               </tr>
