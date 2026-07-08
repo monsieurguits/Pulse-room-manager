@@ -18,7 +18,7 @@ export function DeleteModelButton({ modelId, modelName }: { modelId: string; mod
       }}
     >
       <button
-        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/20"
+        className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/20 xl:w-auto"
         type="submit"
       >
         <Trash2 size={16} />

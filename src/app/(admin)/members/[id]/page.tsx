@@ -25,10 +25,10 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-neutral-50">{member.username}</h1>
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="break-words text-2xl font-bold text-neutral-50">{member.username}</h1>
             <StatusBadge status={status} />
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -36,7 +36,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
             <span className="text-sm text-neutral-400">{member.platform}</span>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="grid gap-2 sm:grid-cols-2 xl:flex">
           <CopySecureLinkButton token={member.secureToken} />
           <a href={`/control/${member.secureToken}`} target="_blank" className="btn-secondary">
             <ExternalLink size={16} />
@@ -65,7 +65,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       <div className="card p-5">
         <h2 className="mb-4 text-sm font-semibold text-neutral-200">Appareil Lovense</h2>
         {member.toyName ? (
-          <div className="flex items-center gap-6 text-sm text-neutral-300">
+          <div className="flex flex-col gap-3 text-sm text-neutral-300 sm:flex-row sm:flex-wrap sm:items-center sm:gap-6">
             <span>
               Jouet : <strong className="text-neutral-100">{member.toyName}</strong>
             </span>

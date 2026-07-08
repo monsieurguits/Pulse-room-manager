@@ -27,12 +27,12 @@ export function QrPairingPanel({ memberId }: { memberId: string }) {
   }
 
   return (
-    <div className="card flex flex-col items-center gap-5 p-8">
+    <div className="card flex flex-col items-center gap-5 p-4 sm:p-8">
       {qrImage ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={qrImage} alt="QR Code d'appairage Lovense" className="h-64 w-64 rounded-xl bg-white p-3" />
+        <img src={qrImage} alt="QR Code d'appairage Lovense" className="aspect-square w-full max-w-64 rounded-xl bg-white p-3" />
       ) : (
-        <div className="flex h-64 w-64 items-center justify-center rounded-xl border border-dashed border-base-700 text-neutral-500">
+        <div className="flex aspect-square w-full max-w-64 items-center justify-center rounded-xl border border-dashed border-base-700 text-center text-neutral-500">
           Aucun QR généré
         </div>
       )}
@@ -41,7 +41,7 @@ export function QrPairingPanel({ memberId }: { memberId: string }) {
         Scannez ce QR code avec l&apos;application Lovense Connect / Remote pour appairer le jouet de ce membre.
       </p>
 
-      <button onClick={generate} disabled={loading} className="btn-accent">
+      <button onClick={generate} disabled={loading} className="btn-accent w-full sm:w-auto">
         {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
         {qrImage ? 'Régénérer le QR code' : 'Générer le QR code'}
       </button>

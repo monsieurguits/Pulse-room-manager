@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { LayoutDashboard, Settings, User, UserCog, Users } from 'lucide-react';
+import { LayoutDashboard, LogOut, Settings, User, UserCog, Users } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { hasAcceptedCurrentLegalTerms, requireAdmin } from '@/lib/auth';
 import { logoutAdmin } from '@/server-actions/auth';
@@ -21,7 +21,35 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const nav = NAV.filter((item) => !item.ownerOnly || admin.role === 'OWNER');
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col md:flex-row">
+      <header className="border-b border-base-800 bg-base-900 px-4 py-3 md:hidden">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <img src="/pulseroom-mark-transparent.png" alt="" className="h-9 w-9 shrink-0 object-contain" />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold tracking-[0.16em] text-neutral-50">PULSEROOM</p>
+              <p className="truncate text-xs text-neutral-500">{admin.name}</p>
+            </div>
+          </div>
+          <form action={logoutAdmin}>
+            <button className="rounded-xl border border-base-700 bg-base-850 p-2 text-neutral-300" type="submit" title="Déconnexion">
+              <LogOut size={17} />
+            </button>
+          </form>
+        </div>
+        <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+          {nav.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-base-800 bg-base-950 px-3 py-2 text-xs font-medium text-neutral-300"
+            >
+              <item.icon size={15} />
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+      </header>
       <aside className="hidden w-64 shrink-0 border-r border-base-800 bg-base-900 p-5 md:block">
         <div className="mb-8 flex items-center gap-2">
           <img src="/pulseroom-mark-transparent.png" alt="" className="h-10 w-10 object-contain" />
@@ -49,7 +77,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </form>
         </div>
       </aside>
-      <main className="flex-1 bg-base-950 p-6 md:p-8">{children}</main>
+      <main className="min-w-0 flex-1 overflow-x-hidden bg-base-950 p-4 sm:p-6 md:p-8">{children}</main>
     </div>
   );
 }

@@ -18,7 +18,7 @@ export function ModelForm() {
   }, [state.success]);
 
   return (
-    <form ref={formRef} action={formAction} className="card grid gap-4 p-5 md:grid-cols-[1fr_1fr_1fr_auto]">
+    <form ref={formRef} action={formAction} className="card grid gap-4 p-5 lg:grid-cols-[1fr_1fr_1fr_auto]">
       <Field label="Nom" error={state.errors?.name}>
         <input name="name" className="input-field" placeholder="Luna Rose" required />
       </Field>

@@ -26,8 +26,51 @@ export default async function ModelsPage() {
 
       <ModelForm />
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-left text-sm">
+      <div className="grid gap-4 xl:hidden">
+        {models.map((model) => (
+          <article key={model.id} className="card p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="break-words font-semibold text-neutral-100">{model.name}</h2>
+                <p className="mt-1 break-all text-xs text-neutral-500">{model.email}</p>
+              </div>
+              {model.active ? (
+                <span className="badge shrink-0 bg-emerald-500/15 text-emerald-300">Actif</span>
+              ) : (
+                <span className="badge shrink-0 bg-base-800 text-neutral-400">Suspendu</span>
+              )}
+            </div>
+            <p className="mt-4 rounded-xl border border-base-800 bg-base-950/70 px-3 py-2 text-sm text-neutral-400">
+              Membres : <strong className="text-neutral-100">{model._count.members}</strong>
+            </p>
+            <div className="mt-4 grid gap-3">
+              <form action={setModelActive.bind(null, model.id, !model.active)}>
+                <button className="btn-secondary w-full" type="submit">
+                  {model.active ? 'Suspendre' : 'Réactiver'}
+                </button>
+              </form>
+              <form action={resetModelPassword.bind(null, model.id)} className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                <input
+                  name="password"
+                  type="password"
+                  minLength={8}
+                  placeholder="Nouveau mot de passe"
+                  className="input-field h-10"
+                />
+                <button className="btn-secondary w-full sm:w-auto" type="submit">
+                  Réinitialiser
+                </button>
+              </form>
+              <DeleteModelButton modelId={model.id} modelName={model.name} />
+            </div>
+          </article>
+        ))}
+        {models.length === 0 && <p className="card p-6 text-center text-sm text-neutral-500">Aucun compte modèle pour le moment.</p>}
+      </div>
+
+      <div className="card hidden overflow-hidden xl:block">
+        <div className="overflow-x-auto">
+        <table className="min-w-[980px] w-full text-left text-sm">
           <thead>
             <tr className="border-b border-base-800 bg-base-850/50 text-neutral-500">
               <th className="px-4 py-3 font-medium">Modèle</th>
@@ -83,6 +126,7 @@ export default async function ModelsPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

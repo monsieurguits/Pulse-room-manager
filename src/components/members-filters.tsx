@@ -28,8 +28,8 @@ export function MembersFilters({ initial }: Props) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div className="relative flex-1 min-w-[220px]">
+    <div className="grid gap-3 sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-center">
+      <div className="relative min-w-0 sm:col-span-2 xl:min-w-[220px] xl:flex-1">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
         <input
           value={query}
@@ -43,7 +43,7 @@ export function MembersFilters({ initial }: Props) {
       <select
         defaultValue={initial.status}
         onChange={(e) => updateParams({ status: e.target.value })}
-        className="input-field w-auto"
+        className="input-field w-full xl:w-auto"
       >
         <option value="all">Tous les statuts</option>
         <option value="active">Actifs</option>
@@ -57,7 +57,7 @@ export function MembersFilters({ initial }: Props) {
           const [sort, dir] = e.target.value.split(':');
           updateParams({ sort, dir });
         }}
-        className="input-field w-auto"
+        className="input-field w-full xl:w-auto"
       >
         <option value="createdAt:desc">Plus récents</option>
         <option value="username:asc">Pseudo (A-Z)</option>
