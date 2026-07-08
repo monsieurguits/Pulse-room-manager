@@ -43,6 +43,8 @@ export async function sendModelWelcomeEmail(input: WelcomeModelEmailInput): Prom
     '',
     `Adresse mail support : ${supportEmail}`,
     '',
+    `Lien d'accès à votre espace : ${loginUrl}`,
+    '',
     `Identifiant : ${input.modelEmail}`,
     '',
     `Mot de passe : ${input.temporaryPassword}`,
@@ -121,6 +123,12 @@ export async function sendModelWelcomeEmail(input: WelcomeModelEmailInput): Prom
                                 </tr>
                                 <tr>
                                   <td style="padding:0 0 14px;">
+                                    <p style="margin:0 0 7px;color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:.07em;">Lien d’accès à votre espace</p>
+                                    <p style="margin:0;color:#67e8f9;font-size:15px;font-weight:700;">${loginUrl}</p>
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td style="padding:0 0 14px;">
                                     <p style="margin:0 0 7px;color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:.07em;">Identifiant</p>
                                     <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;">${escapeHtml(input.modelEmail)}</p>
                                   </td>
@@ -140,7 +148,7 @@ export async function sendModelWelcomeEmail(input: WelcomeModelEmailInput): Prom
                                   </td>
                                 </tr>
                               </table>
-                              <p style="margin:14px 0 0;color:#94a3b8;font-size:12px;line-height:1.6;">Si le bouton ne fonctionne pas, utilisez ce lien : <a href="${loginUrl}" target="_blank" rel="noopener" style="color:#67e8f9;text-decoration:none;font-weight:700;">${loginUrl}</a></p>
+                              <p style="margin:14px 0 0;color:#94a3b8;font-size:12px;line-height:1.6;">Si le bouton ne fonctionne pas, copiez-collez le lien d’accès affiché ci-dessus dans votre navigateur.</p>
                             </td>
                           </tr>
                         </table>
