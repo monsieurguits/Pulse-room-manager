@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import {
@@ -33,6 +34,16 @@ const passwordSchema = z
 export type LoginFormState = { error?: string };
 export type PasswordFormState = { errors?: Record<string, string[]>; success?: boolean; emailWarning?: string };
 export type LegalAcceptanceState = { error?: string };
+export type WeatherCityFormState = { errors?: Record<string, string[]>; success?: boolean };
+
+const weatherCitySchema = z.object({
+  weatherCity: z
+    .string()
+    .trim()
+    .max(80, '80 caractères maximum.')
+    .optional()
+    .transform((value) => value || null),
+});
 
 const allowedSubscriptionPlans = new Set(['starter', 'pro', 'premium']);
 
@@ -120,6 +131,28 @@ export async function changeOwnPassword(_prev: PasswordFormState, formData: Form
       emailWarning: (error as Error).message,
     };
   }
+
+  return { success: true };
+}
+
+export async function updateWeatherCity(_prev: WeatherCityFormState, formData: FormData): Promise<WeatherCityFormState> {
+  const admin = await requireAdmin();
+
+  const parsed = weatherCitySchema.safeParse({
+    weatherCity: formData.get('weatherCity'),
+  });
+
+  if (!parsed.success) {
+    return { errors: parsed.error.flatten().fieldErrors };
+  }
+
+  await db.adminUser.update({
+    where: { id: admin.id },
+    data: { weatherCity: parsed.data.weatherCity },
+  });
+
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/account');
 
   return { success: true };
 }

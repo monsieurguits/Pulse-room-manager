@@ -80,6 +80,7 @@ model AdminUser {
   subscriptionPlan String?
   subscriptionStartedAt DateTime?
   subscriptionEndsAt DateTime?
+  weatherCity String?
   overlayToken String? @unique
 
   members  Member[]

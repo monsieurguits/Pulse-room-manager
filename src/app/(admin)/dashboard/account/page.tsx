@@ -9,6 +9,7 @@ import {
   KeyRound,
   LifeBuoy,
   LockKeyhole,
+  MapPin,
   MonitorPlay,
   ShieldCheck,
   UserRound,
@@ -16,6 +17,7 @@ import {
 } from 'lucide-react';
 import { AccountPasswordForm } from '@/components/account-password-form';
 import { OverlayLinkCard } from '@/components/overlay-link-card';
+import { WeatherCityForm } from '@/components/weather-city-form';
 import { LEGAL_TERMS_VERSION, memberOwnerWhere, requireAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { ensureOverlayToken } from '@/lib/overlay';
@@ -105,6 +107,7 @@ export default async function AccountPage() {
             <InfoItem label="Rôle" value={admin.role === 'OWNER' ? 'Propriétaire' : 'Modèle'} />
             <InfoItem label="Compte créé le" value={formatDate(user?.createdAt)} />
             <InfoItem label="Dernière mise à jour" value={formatDate(user?.updatedAt)} />
+            <InfoItem label="Ville météo" value={admin.weatherCity ?? 'Non configurée'} />
             <InfoItem label="Version légale actuelle" value={LEGAL_TERMS_VERSION} />
           </div>
         </section>
@@ -191,6 +194,20 @@ export default async function AccountPage() {
           </div>
         </section>
       </div>
+
+      <section className="card p-5">
+        <div className="mb-5 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-300">
+            <MapPin size={20} />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-neutral-200">Météo du tableau de bord</h2>
+            <p className="text-xs text-neutral-500">Ville utilisée pour afficher la température et le message d’accueil.</p>
+          </div>
+        </div>
+
+        <WeatherCityForm defaultValue={admin.weatherCity} />
+      </section>
 
       {admin.role === 'MODEL' ? (
         <section className="card p-5">

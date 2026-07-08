@@ -18,6 +18,7 @@ export type CurrentAdmin = Pick<
   | 'subscriptionPlan'
   | 'subscriptionStartedAt'
   | 'subscriptionEndsAt'
+  | 'weatherCity'
 >;
 
 const SESSION_COOKIE = 'pulse_admin_session';
@@ -122,6 +123,7 @@ export async function getCurrentAdmin(): Promise<CurrentAdmin | null> {
     subscriptionPlan: session.user.subscriptionPlan,
     subscriptionStartedAt: session.user.subscriptionStartedAt,
     subscriptionEndsAt: session.user.subscriptionEndsAt,
+    weatherCity: session.user.weatherCity,
   };
 }
 

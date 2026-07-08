@@ -1,22 +1,39 @@
-import { Users, Zap, Gauge, Clock } from 'lucide-react';
+import { Users, Zap, Gauge, Clock, CloudSun } from 'lucide-react';
 import { StatCard } from '@/components/stat-card';
 import { getDashboardStats } from '@/lib/dashboard-queries';
 import { formatDuration } from '@/lib/utils';
 import { RecentSessionsTable } from '@/components/recent-sessions-table';
 import { WeeklyUsageChart } from '@/components/weekly-usage-chart';
 import { requireAdmin } from '@/lib/auth';
+import { getDashboardWeather } from '@/lib/weather';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   const admin = await requireAdmin();
-  const stats = await getDashboardStats(admin);
+  const [stats, weather] = await Promise.all([getDashboardStats(admin), getDashboardWeather(admin.weatherCity)]);
 
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-2xl border border-white/10 bg-base-900/70 px-5 py-4 text-center shadow-xl shadow-black/20 backdrop-blur-xl">
-        <p className="text-sm font-medium text-neutral-300 sm:text-base">
-          Hello, <span className="font-semibold text-neutral-50">{admin.name}</span>, nous vous souhaitons une belle journée.
+        <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-accent-500/15 text-accent-300">
+          <CloudSun size={18} />
+        </div>
+        <p className="text-sm font-medium leading-6 text-neutral-300 sm:text-base">
+          {weather ? (
+            <>
+              Hello, <span className="font-semibold text-neutral-50">{admin.name}</span>, aujourd&apos;hui les températures
+              extérieures sont de{' '}
+              <span className="font-semibold text-neutral-50">{Math.round(weather.temperature)}°C</span> à{' '}
+              <span className="font-semibold text-neutral-50">{weather.city}</span>. Il est temps de{' '}
+              <span className="font-semibold text-accent-300">{weather.action}</span>.
+            </>
+          ) : (
+            <>
+              Hello, <span className="font-semibold text-neutral-50">{admin.name}</span>, nous vous souhaitons une belle journée.
+              Ajoutez votre ville dans Compte pour personnaliser ce message.
+            </>
+          )}
         </p>
       </div>
 
