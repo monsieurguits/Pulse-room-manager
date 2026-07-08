@@ -136,10 +136,11 @@ export async function sendModelWelcomeEmail(input: WelcomeModelEmailInput): Prom
                               <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:22px;">
                                 <tr>
                                   <td style="border-radius:999px;background:linear-gradient(135deg,#ff2e6d,#00d8ff);">
-                                    <a href="${loginUrl}" style="display:inline-block;padding:13px 20px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:800;">Ouvrir mon espace PULSEROOM</a>
+                                    <a href="${loginUrl}" target="_blank" rel="noopener" style="display:block;padding:13px 20px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:800;">Ouvrir mon espace PULSEROOM</a>
                                   </td>
                                 </tr>
                               </table>
+                              <p style="margin:14px 0 0;color:#94a3b8;font-size:12px;line-height:1.6;">Si le bouton ne fonctionne pas, utilisez ce lien : <a href="${loginUrl}" target="_blank" rel="noopener" style="color:#67e8f9;text-decoration:none;font-weight:700;">${loginUrl}</a></p>
                             </td>
                           </tr>
                         </table>
