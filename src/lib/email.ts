@@ -6,6 +6,7 @@ interface WelcomeModelEmailInput {
 }
 
 const DEFAULT_APP_URL = 'https://pulse-room.app';
+const PUBLIC_APP_URL = 'https://pulse-room.app';
 
 function getAppUrl(): string {
   const raw =
@@ -27,8 +28,8 @@ export async function sendModelWelcomeEmail(input: WelcomeModelEmailInput): Prom
   }
 
   const supportEmail = 'contact@pulse-room.app';
-  const loginUrl = 'https://www.pulse-room.app';
-  const logoUrl = `${appUrl}/pulseroom-logo-transparent.png`;
+  const loginUrl = `${PUBLIC_APP_URL}/login`;
+  const logoUrl = `${PUBLIC_APP_URL}/pulseroom-logo-transparent.png`;
   const subject = 'Bienvenue sur PULSEROOM – Vos accès et guide de démarrage';
 
   const text = [
