@@ -8,7 +8,16 @@ export const LEGAL_TERMS_VERSION = '2026-07-07';
 
 export type CurrentAdmin = Pick<
   AdminUser,
-  'id' | 'email' | 'name' | 'role' | 'active' | 'legalAcceptedAt' | 'legalAcceptedVersion'
+  | 'id'
+  | 'email'
+  | 'name'
+  | 'role'
+  | 'active'
+  | 'legalAcceptedAt'
+  | 'legalAcceptedVersion'
+  | 'subscriptionPlan'
+  | 'subscriptionStartedAt'
+  | 'subscriptionEndsAt'
 >;
 
 const SESSION_COOKIE = 'pulse_admin_session';
@@ -110,6 +119,9 @@ export async function getCurrentAdmin(): Promise<CurrentAdmin | null> {
     active: session.user.active,
     legalAcceptedAt: session.user.legalAcceptedAt,
     legalAcceptedVersion: session.user.legalAcceptedVersion,
+    subscriptionPlan: session.user.subscriptionPlan,
+    subscriptionStartedAt: session.user.subscriptionStartedAt,
+    subscriptionEndsAt: session.user.subscriptionEndsAt,
   };
 }
 

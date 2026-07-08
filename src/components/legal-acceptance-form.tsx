@@ -7,8 +7,12 @@ const initialState: LegalAcceptanceState = {};
 
 export function LegalAcceptanceForm({
   action,
+  plan,
+  trial,
 }: {
   action: (prev: LegalAcceptanceState, formData: FormData) => Promise<LegalAcceptanceState>;
+  plan?: string;
+  trial?: string;
 }) {
   const [checked, setChecked] = useState(false);
   const [state, formAction, isPending] = useActionState(action, initialState);
@@ -21,6 +25,8 @@ export function LegalAcceptanceForm({
       </p>
 
       <form action={formAction} className="mt-5 flex flex-col gap-4">
+        {plan ? <input type="hidden" name="plan" value={plan} /> : null}
+        {trial ? <input type="hidden" name="trial" value={trial} /> : null}
         <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-base-950/70 p-4">
           <input
             name="accepted"

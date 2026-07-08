@@ -127,8 +127,16 @@ const sections = [
   },
 ];
 
-export default async function LegalAcceptPage() {
+export default async function LegalAcceptPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{
+    plan?: string;
+    trial?: string;
+  }>;
+}) {
   const admin = await requireAdmin();
+  const params = await searchParams;
 
   if (admin.role !== 'MODEL' || hasAcceptedCurrentLegalTerms(admin)) {
     redirect('/dashboard');
@@ -177,7 +185,7 @@ export default async function LegalAcceptPage() {
             </div>
           </section>
 
-          <LegalAcceptanceForm action={acceptLegalTerms} />
+          <LegalAcceptanceForm action={acceptLegalTerms} plan={params?.plan} trial={params?.trial} />
         </div>
       </div>
     </main>

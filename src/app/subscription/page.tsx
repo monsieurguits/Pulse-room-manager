@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { BadgeCheck, Crown, Radio, ShieldCheck, Sparkles, Star, Users, Zap } from 'lucide-react';
-import { hasAcceptedCurrentLegalTerms, requireAdmin } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,7 +63,7 @@ const PLANS = [
 export default async function SubscriptionPage() {
   const admin = await requireAdmin();
 
-  if (admin.role !== 'MODEL' || hasAcceptedCurrentLegalTerms(admin)) {
+  if (admin.role !== 'MODEL') {
     redirect('/dashboard');
   }
 
@@ -122,7 +122,10 @@ export default async function SubscriptionPage() {
                 ))}
               </ul>
 
-              <Link href={`/legal/accept?plan=${plan.id}`} className={plan.highlighted ? 'btn-accent mt-6 w-full' : 'btn-secondary mt-6 w-full'}>
+              <Link
+                href={`/subscription/payment?plan=${plan.id}`}
+                className={plan.highlighted ? 'btn-accent mt-6 w-full' : 'btn-secondary mt-6 w-full'}
+              >
                 <Zap size={17} />
                 S’abonner
               </Link>

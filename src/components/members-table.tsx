@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Copy, ExternalLink, Pencil, RotateCcw, Ban, Trash2, QrCode } from 'lucide-react';
 import { StatusBadge, deriveMemberStatus } from '@/components/status-badge';
 import { MemberTierBadge } from '@/components/member-tier-badge';
+import { buildMemberInviteMessage } from '@/lib/member-invite-message';
 import { formatDuration } from '@/lib/utils';
 import { deleteMember, suspendMember, resetCredit } from '@/server-actions/members';
 
@@ -14,10 +15,11 @@ export function MembersTable({ members }: { members: Member[] }) {
     return <p className="p-6 text-center text-sm text-neutral-500">Aucun membre ne correspond à ces critères.</p>;
   }
 
-  function copyLink(token: string) {
+  function copyLink(member: Member) {
+    const token = member.secureToken;
     const url = `${window.location.origin}/control/${token}`;
-    navigator.clipboard.writeText(url);
-    toast.success('Lien sécurisé copié dans le presse-papiers.');
+    navigator.clipboard.writeText(buildMemberInviteMessage({ username: member.username, url }));
+    toast.success('Message avec lien copié dans le presse-papiers.');
   }
 
   return (
@@ -108,14 +110,14 @@ function MemberActions({
   table = false,
 }: {
   member: Member;
-  copyLink: (token: string) => void;
+  copyLink: (member: Member) => void;
   table?: boolean;
 }) {
   return (
     <div className={table ? 'flex items-center justify-end gap-1.5' : 'mt-4 grid grid-cols-4 gap-2 sm:grid-cols-7'}>
       <button
-        title="Copier le lien sécurisé"
-        onClick={() => copyLink(member.secureToken)}
+        title="Copier le message avec lien sécurisé"
+        onClick={() => copyLink(member)}
         className="rounded-lg p-2 text-neutral-400 hover:bg-base-800 hover:text-accent-400"
       >
         <Copy size={16} />

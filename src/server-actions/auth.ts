@@ -33,6 +33,14 @@ export type LoginFormState = { error?: string };
 export type PasswordFormState = { errors?: Record<string, string[]>; success?: boolean };
 export type LegalAcceptanceState = { error?: string };
 
+const allowedSubscriptionPlans = new Set(['starter', 'pro', 'premium']);
+
+function addOneMonth(date: Date): Date {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + 1);
+  return next;
+}
+
 export async function loginAdmin(_prev: LoginFormState, formData: FormData): Promise<LoginFormState> {
   await ensureInitialOwner();
 
@@ -105,6 +113,8 @@ export async function changeOwnPassword(_prev: PasswordFormState, formData: Form
 export async function acceptLegalTerms(_prev: LegalAcceptanceState, formData: FormData): Promise<LegalAcceptanceState> {
   const admin = await requireAdmin();
   const accepted = formData.get('accepted') === 'on';
+  const selectedPlan = String(formData.get('plan') || '').toLowerCase();
+  const isTrial = formData.get('trial') === '30';
 
   if (admin.role !== 'MODEL') {
     redirect('/dashboard');
@@ -114,11 +124,17 @@ export async function acceptLegalTerms(_prev: LegalAcceptanceState, formData: Fo
     return { error: 'Vous devez cocher la case pour continuer.' };
   }
 
+  const subscriptionStartedAt = new Date();
+  const subscriptionPlan = isTrial ? 'trial' : allowedSubscriptionPlans.has(selectedPlan) ? selectedPlan : 'trial';
+
   await db.adminUser.update({
     where: { id: admin.id },
     data: {
       legalAcceptedAt: new Date(),
       legalAcceptedVersion: LEGAL_TERMS_VERSION,
+      subscriptionPlan,
+      subscriptionStartedAt,
+      subscriptionEndsAt: addOneMonth(subscriptionStartedAt),
     },
   });
 

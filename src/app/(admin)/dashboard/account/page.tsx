@@ -4,6 +4,7 @@ import {
   BookOpen,
   CalendarDays,
   CircleHelp,
+  Crown,
   FileText,
   KeyRound,
   LifeBuoy,
@@ -27,6 +28,33 @@ function formatDate(date: Date | null | undefined) {
   return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
 
+function formatDateOnly(date: Date | null | undefined) {
+  if (!date) return 'Non disponible';
+  return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium' }).format(date);
+}
+
+function getSubscriptionLabel(plan: string | null | undefined) {
+  switch (plan) {
+    case 'starter':
+      return 'Starter';
+    case 'pro':
+      return 'Pro';
+    case 'premium':
+      return 'Premium';
+    case 'trial':
+      return 'Essai gratuit 30 jours';
+    default:
+      return 'Non sélectionné';
+  }
+}
+
+function addOneMonth(date: Date | null | undefined) {
+  if (!date) return null;
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + 1);
+  return next;
+}
+
 export default async function AccountPage() {
   const admin = await requireAdmin();
   const overlayToken = await ensureOverlayToken(admin.id);
@@ -41,6 +69,9 @@ export default async function AccountPage() {
   ]);
 
   const legalAccepted = admin.role !== 'MODEL' || admin.legalAcceptedVersion === LEGAL_TERMS_VERSION;
+  const displayedSubscriptionPlan = admin.subscriptionPlan ?? (admin.legalAcceptedAt ? 'trial' : null);
+  const displayedSubscriptionStart = admin.subscriptionStartedAt ?? admin.legalAcceptedAt;
+  const displayedSubscriptionEnd = admin.subscriptionEndsAt ?? addOneMonth(admin.legalAcceptedAt);
 
   return (
     <div className="flex flex-col gap-6">
@@ -160,6 +191,35 @@ export default async function AccountPage() {
           </div>
         </section>
       </div>
+
+      {admin.role === 'MODEL' ? (
+        <section className="card p-5">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-500/15 text-accent-400">
+              <Crown size={20} />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-neutral-200">Abonnement</h2>
+              <p className="text-xs text-neutral-500">Offre actuellement associée à votre espace modèle.</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <InfoItem label="Offre en cours" value={getSubscriptionLabel(displayedSubscriptionPlan)} />
+            <InfoItem label="Date de début" value={formatDateOnly(displayedSubscriptionStart)} />
+            <InfoItem label="Date de fin" value={formatDateOnly(displayedSubscriptionEnd)} />
+          </div>
+
+          <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-base-800 bg-base-950/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm leading-6 text-neutral-400">
+              Chaque période affichée couvre un mois. Vous pouvez consulter les offres si vous souhaitez changer de plan.
+            </p>
+            <Link href="/subscription" className="btn-accent shrink-0 justify-center">
+              Changer de plan
+            </Link>
+          </div>
+        </section>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-2">
         <section className="card p-5">

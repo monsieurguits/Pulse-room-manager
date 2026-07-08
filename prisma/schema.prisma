@@ -77,6 +77,9 @@ model AdminUser {
   active       Boolean  @default(true)
   legalAcceptedAt DateTime?
   legalAcceptedVersion String?
+  subscriptionPlan String?
+  subscriptionStartedAt DateTime?
+  subscriptionEndsAt DateTime?
   overlayToken String? @unique
 
   members  Member[]

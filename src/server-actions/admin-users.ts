@@ -12,7 +12,13 @@ const modelSchema = z.object({
   password: z.string().min(8, '8 caractères minimum.'),
 });
 
-export type ModelFormState = { errors?: Record<string, string[]>; success?: boolean; emailWarning?: string };
+export type ModelFormState = {
+  errors?: Record<string, string[]>;
+  success?: boolean;
+  emailWarning?: string;
+  createdEmail?: string;
+  temporaryPassword?: string;
+};
 
 export async function createModelAdmin(_prev: ModelFormState, formData: FormData): Promise<ModelFormState> {
   const owner = await requireOwner();
@@ -55,6 +61,8 @@ export async function createModelAdmin(_prev: ModelFormState, formData: FormData
     return {
       success: true,
       emailWarning: (error as Error).message,
+      createdEmail: email,
+      temporaryPassword: parsed.data.password,
     };
   }
 

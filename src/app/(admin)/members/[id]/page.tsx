@@ -37,7 +37,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           </div>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 xl:flex">
-          <CopySecureLinkButton token={member.secureToken} />
+          <CopySecureLinkButton token={member.secureToken} username={member.username} />
           <a href={`/control/${member.secureToken}`} target="_blank" className="btn-secondary">
             <ExternalLink size={16} />
             Ouvrir le contrôle
