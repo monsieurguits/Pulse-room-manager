@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Square,
   TimerReset,
+  ThermometerSun,
   Waves,
   Wifi,
   WifiOff,
@@ -78,6 +79,7 @@ interface Props {
   subscriptionEndDate: string;
   currentMonthStartDate: string;
   currentMonthEndDate: string;
+  memberWeather?: { modelName: string; temperature: number } | null;
   initial: RealtimeMemberState & { weeklyCredit: number };
 }
 
@@ -93,6 +95,7 @@ export function ControlPanel({
   subscriptionEndDate,
   currentMonthStartDate,
   currentMonthEndDate,
+  memberWeather,
   initial,
 }: Props) {
   const [controlClientId, setControlClientId] = useState<string | null>(null);
@@ -330,10 +333,25 @@ export function ControlPanel({
   const memberSinceLabel = formatDisplayDate(memberSince);
   const subscriptionPeriodLabel = `${formatDisplayDate(subscriptionStartDate)} - ${formatDisplayDate(subscriptionEndDate)}`;
   const currentMonthPeriodLabel = `${formatDisplayDate(currentMonthStartDate)} - ${formatDisplayDate(currentMonthEndDate)}`;
+  const memberWeatherAction = memberWeather && memberWeather.temperature >= 21 ? 'le faire mouiller' : 'le réchauffer';
 
   return (
     <main className="min-h-screen bg-base-950 px-4 py-6 text-neutral-100 sm:px-6 lg:px-8 lg:py-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
+        {memberWeather ? (
+          <section className="rounded-2xl border border-white/10 bg-base-900/70 px-5 py-4 text-center shadow-xl shadow-black/20 backdrop-blur-xl">
+            <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-accent-500/15 text-accent-300">
+              <ThermometerSun size={18} />
+            </div>
+            <p className="text-sm font-medium leading-6 text-neutral-300 sm:text-base">
+              Hello, <span className="font-semibold text-neutral-50">{username}</span>, il fait actuellement{' '}
+              <span className="font-semibold text-neutral-50">{Math.round(memberWeather.temperature)}°C</span> chez{' '}
+              <span className="font-semibold text-neutral-50">{memberWeather.modelName}</span>. Il est temps de{' '}
+              <span className="font-semibold text-accent-300">{memberWeatherAction}</span>.
+            </p>
+          </section>
+        ) : null}
+
         <section className="overflow-hidden rounded-[28px] border border-base-700 bg-base-900 shadow-2xl">
           <div className="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="relative overflow-hidden border-b border-base-800 p-6 sm:p-8 lg:border-b-0 lg:border-r">

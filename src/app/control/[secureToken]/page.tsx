@@ -3,13 +3,17 @@ import { db } from '@/lib/db';
 import { ControlPanel } from '@/components/control-panel';
 import { TermsAcceptancePanel } from '@/components/terms-acceptance-panel';
 import { getToys } from '@/lib/lovense/service';
+import { getDashboardWeather } from '@/lib/weather';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ControlPage({ params }: { params: Promise<{ secureToken: string }> }) {
   const { secureToken } = await params;
 
-  const member = await db.member.findUnique({ where: { secureToken } });
+  const member = await db.member.findUnique({
+    where: { secureToken },
+    include: { owner: { select: { name: true, weatherCity: true } } },
+  });
 
   if (!member) notFound();
 
@@ -34,7 +38,10 @@ export default async function ControlPage({ params }: { params: Promise<{ secure
     ? Math.floor((Date.now() - ownActiveSession.startedAt.getTime()) / 1000)
     : 0;
 
-  const toys = await getToys(member.id).catch(() => []);
+  const [toys, weather] = await Promise.all([
+    getToys(member.id).catch(() => []),
+    getDashboardWeather(member.owner?.weatherCity),
+  ]);
   const now = new Date();
   const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -52,6 +59,7 @@ export default async function ControlPage({ params }: { params: Promise<{ secure
       subscriptionEndDate={member.endDate.toISOString()}
       currentMonthStartDate={currentMonthStart.toISOString()}
       currentMonthEndDate={currentMonthEnd.toISOString()}
+      memberWeather={weather ? { modelName: member.owner?.name ?? 'le modèle', temperature: weather.temperature } : null}
       initial={{
         remainingCredit: member.remainingCredit,
         weeklyCredit: member.weeklyCredit,
