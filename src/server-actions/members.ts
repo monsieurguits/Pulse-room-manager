@@ -92,7 +92,7 @@ export async function deleteMember(memberId: string): Promise<void> {
   if (!member || !canAccessMember(admin, member)) return;
 
   await stopSession(memberId, 'manual').catch(() => undefined);
-  await db.member.delete({ where: { id: memberId } });
+  await deleteMemberRecords([memberId]);
   revalidatePath('/members');
   revalidatePath('/dashboard');
 }
@@ -117,17 +117,26 @@ export async function deleteMembers(memberIds: string[]): Promise<{ deleted: num
 
   await Promise.all(accessibleIds.map((memberId) => stopSession(memberId, 'manual').catch(() => undefined)));
 
-  const result = await db.member.deleteMany({
-    where: {
-      ...memberOwnerWhere(admin),
-      id: { in: accessibleIds },
-    },
-  });
+  const deleted = await deleteMemberRecords(accessibleIds);
 
   revalidatePath('/members');
   revalidatePath('/dashboard');
 
-  return { deleted: result.count };
+  return { deleted };
+}
+
+async function deleteMemberRecords(memberIds: string[]): Promise<number> {
+  const ids = [...new Set(memberIds)].filter(Boolean);
+  if (ids.length === 0) return 0;
+
+  const result = await db.$transaction(async (tx) => {
+    await tx.tipCommand.deleteMany({ where: { memberId: { in: ids } } });
+    await tx.controlOverlayEvent.deleteMany({ where: { memberId: { in: ids } } });
+    await tx.session.deleteMany({ where: { memberId: { in: ids } } });
+    return tx.member.deleteMany({ where: { id: { in: ids } } });
+  });
+
+  return result.count;
 }
 
 export async function suspendMember(memberId: string, suspend: boolean): Promise<void> {
