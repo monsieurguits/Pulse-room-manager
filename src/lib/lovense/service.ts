@@ -224,6 +224,8 @@ async function requireLovenseTarget(memberId: string, toyId?: string) {
     }
   }
   return {
+    sourceMemberId: member.id,
+    ownerId: member.ownerId,
     uid: member.lovenseUserId,
     domain: member.deviceDomain,
     httpsPort: member.httpsPort,
@@ -231,15 +233,73 @@ async function requireLovenseTarget(memberId: string, toyId?: string) {
   };
 }
 
+type LovenseTarget = Awaited<ReturnType<typeof requireLovenseTarget>>;
+
 async function runCommand(
   memberId: string,
-  build: (target: Awaited<ReturnType<typeof requireLovenseTarget>>) => Parameters<typeof sendCommand>[0],
+  build: (target: LovenseTarget) => Parameters<typeof sendCommand>[0],
   toyId?: string
 ): Promise<LovenseCommandResult> {
   const target = await requireLovenseTarget(memberId, toyId);
-  const result = await sendCommand(build(target));
+  let result = await sendCommand(build(target));
+
+  if (!result.ok && isLovenseAppOffline(result)) {
+    await db.member.update({ where: { id: target.sourceMemberId }, data: { connected: false } }).catch(() => undefined);
+
+    const fallbackTarget = await findFallbackLovenseTarget(target, toyId);
+    if (fallbackTarget) {
+      result = await sendCommand(build(fallbackTarget));
+    }
+  }
+
   broadcast({ type: 'command-result', memberId, ok: result.ok, message: result.message });
   return result;
+}
+
+function isLovenseAppOffline(result: LovenseCommandResult): boolean {
+  const message = `${result.message} ${JSON.stringify(result.raw ?? {})}`.toLowerCase();
+  return message.includes('app is offline') || message.includes('offline');
+}
+
+async function findFallbackLovenseTarget(currentTarget: LovenseTarget, toyId?: string): Promise<LovenseTarget | null> {
+  const candidates = await db.member.findMany({
+    where: {
+      ownerId: currentTarget.ownerId,
+      connected: true,
+      lovenseUserId: { not: null },
+      deviceDomain: { not: null },
+      httpsPort: { not: null },
+      NOT: { lovenseUserId: currentTarget.uid },
+    },
+    orderBy: { updatedAt: 'desc' },
+    take: 10,
+  });
+
+  const candidate = candidates.find((member) => {
+    if (!toyId) return true;
+    const toys = parseStoredToys(member.toysJson);
+    return toys.length === 0 || toys.some((toy) => toy.id === toyId);
+  });
+
+  if (!candidate?.lovenseUserId || !candidate.deviceDomain || !candidate.httpsPort) {
+    return null;
+  }
+
+  console.log('Lovense fallback UID utilisé:', {
+    fromUid: currentTarget.uid,
+    toUid: candidate.lovenseUserId,
+    memberId: candidate.id,
+    toyId,
+  });
+
+  return {
+    sourceMemberId: candidate.id,
+    ownerId: candidate.ownerId,
+    uid: candidate.lovenseUserId,
+    domain: candidate.deviceDomain,
+    httpsPort: candidate.httpsPort,
+    toy: toyId,
+  };
 }
 
 export async function vibrate(memberId: string, level: number, timeSec = 0, toyId?: string) {
