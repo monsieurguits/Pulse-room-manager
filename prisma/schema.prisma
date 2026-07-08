@@ -24,6 +24,7 @@ model Member {
 
   // Accès public sécurisé
   secureToken String @unique @default(cuid())
+  accessCode  String? @unique
 
   // Abonnement
   memberSince DateTime?

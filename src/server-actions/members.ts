@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { stopSession } from '@/lib/session-engine';
 import { canAccessMember, memberOwnerWhere, requireAdmin } from '@/lib/auth';
+import { createUniqueMemberAccessCode } from '@/lib/member-code';
 
 const memberSchema = z.object({
   username: z.string().min(2, 'Le pseudo doit contenir au moins 2 caractères.'),
@@ -40,6 +41,7 @@ export async function createMember(_prev: MemberFormState, formData: FormData): 
     data: {
       ...rest,
       ownerId: admin.id,
+      accessCode: await createUniqueMemberAccessCode(),
       weeklyCredit,
       remainingCredit: weeklyCredit,
     },

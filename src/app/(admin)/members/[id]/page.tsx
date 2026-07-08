@@ -37,7 +37,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           </div>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 xl:flex">
-          <CopySecureLinkButton token={member.secureToken} username={member.username} />
+          <CopySecureLinkButton username={member.username} accessCode={member.accessCode} />
           <a href={`/control/${member.secureToken}`} target="_blank" className="btn-secondary">
             <ExternalLink size={16} />
             Ouvrir le contrôle
@@ -53,12 +53,13 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <div className="card flex items-center p-5">
           <MemberTierBadge weeklyCredit={member.weeklyCredit} size="large" className="mx-0" />
         </div>
         <InfoCard label="Crédit restant" value={formatDuration(member.remainingCredit)} />
         <InfoCard label="Crédit hebdomadaire" value={formatDuration(member.weeklyCredit)} />
+        <InfoCard label="Code membre" value={member.accessCode ?? 'Non généré'} />
         <InfoCard label="Expiration" value={new Date(member.endDate).toLocaleDateString('fr-FR')} />
       </div>
 

@@ -4,14 +4,14 @@ import { Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { buildMemberInviteMessage } from '@/lib/member-invite-message';
 
-export function CopySecureLinkButton({ token, username }: { token: string; username: string }) {
+export function CopySecureLinkButton({ username, accessCode }: { username: string; accessCode: string | null }) {
   return (
     <button
       className="btn-secondary"
       onClick={() => {
-        const url = `${window.location.origin}/control/${token}`;
-        navigator.clipboard.writeText(buildMemberInviteMessage({ username, url }));
-        toast.success('Message avec lien copié.');
+        const joinUrl = `${window.location.origin}/join`;
+        navigator.clipboard.writeText(buildMemberInviteMessage({ username, joinUrl, accessCode }));
+        toast.success('Message avec code copié.');
       }}
     >
       <Copy size={16} />

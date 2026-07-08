@@ -28,10 +28,9 @@ export function MembersTable({ members }: { members: Member[] }) {
   }
 
   function copyLink(member: Member) {
-    const token = member.secureToken;
-    const url = `${window.location.origin}/control/${token}`;
-    navigator.clipboard.writeText(buildMemberInviteMessage({ username: member.username, url }));
-    toast.success('Message avec lien copié dans le presse-papiers.');
+    const joinUrl = `${window.location.origin}/join`;
+    navigator.clipboard.writeText(buildMemberInviteMessage({ username: member.username, joinUrl, accessCode: member.accessCode }));
+    toast.success('Message avec code copié dans le presse-papiers.');
   }
 
   function toggleMember(memberId: string) {
@@ -134,6 +133,7 @@ export function MembersTable({ members }: { members: Member[] }) {
                   <MemberTierBadge weeklyCredit={member.weeklyCredit} />
                 </div>
                 <InfoLine label="Crédit" value={formatDuration(member.remainingCredit)} />
+                <InfoLine label="Code" value={member.accessCode ?? 'Non généré'} />
                 <InfoLine label="Expiration" value={new Date(member.endDate).toLocaleDateString('fr-FR')} />
               </div>
               <MemberActions member={member} copyLink={copyLink} deleteOne={deleteOne} isPending={isPending} />
@@ -153,6 +153,7 @@ export function MembersTable({ members }: { members: Member[] }) {
               <th className="px-4 py-3 font-medium">Niveau</th>
               <th className="px-4 py-3 font-medium">Plateforme</th>
               <th className="px-4 py-3 font-medium">Statut</th>
+              <th className="px-4 py-3 font-medium">Code</th>
               <th className="px-4 py-3 font-medium">Crédit restant</th>
               <th className="px-4 py-3 font-medium">Expiration</th>
               <th className="px-4 py-3 font-medium text-right">Actions</th>
@@ -182,6 +183,7 @@ export function MembersTable({ members }: { members: Member[] }) {
                   <td className="px-4 py-3">
                     <StatusBadge status={status} />
                   </td>
+                  <td className="px-4 py-3 font-mono font-semibold text-accent-300">{member.accessCode ?? '-'}</td>
                   <td className="px-4 py-3">{formatDuration(member.remainingCredit)}</td>
                   <td className="px-4 py-3">{new Date(member.endDate).toLocaleDateString('fr-FR')}</td>
                   <td className="px-4 py-3">
