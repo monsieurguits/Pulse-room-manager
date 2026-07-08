@@ -26,7 +26,8 @@ export async function sendModelWelcomeEmail(input: WelcomeModelEmailInput): Prom
     throw new Error('Configuration email manquante : RESEND_API_KEY et EMAIL_FROM sont requis.');
   }
 
-  const supportEmail = process.env.SUPPORT_EMAIL || input.adminEmail;
+  const supportEmail = 'contact@pulse-room.app';
+  const loginUrl = 'https://www.pulse-room.app';
   const logoUrl = `${appUrl}/pulseroom-logo-transparent.png`;
   const subject = 'Bienvenue sur PULSEROOM – Vos accès et guide de démarrage';
 
@@ -39,7 +40,7 @@ export async function sendModelWelcomeEmail(input: WelcomeModelEmailInput): Prom
     '',
     'Vos identifiants de connexion',
     '',
-    `Adresse de connexion : ${appUrl}`,
+    `Adresse mail support : ${supportEmail}`,
     '',
     `Identifiant : ${input.modelEmail}`,
     '',
@@ -65,7 +66,7 @@ export async function sendModelWelcomeEmail(input: WelcomeModelEmailInput): Prom
     '',
     'Si vous rencontrez la moindre difficulté lors de la configuration ou de l’utilisation de PULSEROOM, notre équipe reste à votre disposition.',
     '',
-    'Il vous suffit de répondre directement à cet e-mail ou de nous contacter via le support.',
+    `Il vous suffit de répondre directement à cet e-mail ou de nous contacter via le support : ${supportEmail}.`,
     '',
     'Nous vous remercions de votre confiance et vous souhaitons une excellente utilisation de PULSEROOM.',
     '',
@@ -113,8 +114,8 @@ export async function sendModelWelcomeEmail(input: WelcomeModelEmailInput): Prom
                               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                                 <tr>
                                   <td style="padding:0 0 14px;">
-                                    <p style="margin:0 0 7px;color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:.07em;">Adresse de connexion</p>
-                                    <p style="margin:0;"><a href="${appUrl}" style="color:#67e8f9;text-decoration:none;font-size:15px;font-weight:700;">${appUrl}</a></p>
+                                    <p style="margin:0 0 7px;color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:.07em;">Adresse mail support</p>
+                                    <p style="margin:0;"><a href="mailto:${supportEmail}" style="color:#67e8f9;text-decoration:none;font-size:15px;font-weight:700;">${supportEmail}</a></p>
                                   </td>
                                 </tr>
                                 <tr>
@@ -134,7 +135,7 @@ export async function sendModelWelcomeEmail(input: WelcomeModelEmailInput): Prom
                               <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:22px;">
                                 <tr>
                                   <td style="border-radius:999px;background:linear-gradient(135deg,#ff2e6d,#00d8ff);">
-                                    <a href="${appUrl}" style="display:inline-block;padding:13px 20px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:800;">Ouvrir mon espace PULSEROOM</a>
+                                    <a href="${loginUrl}" style="display:inline-block;padding:13px 20px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:800;">Ouvrir mon espace PULSEROOM</a>
                                   </td>
                                 </tr>
                               </table>
