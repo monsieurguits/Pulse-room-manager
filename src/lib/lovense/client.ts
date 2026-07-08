@@ -45,7 +45,21 @@ export async function getCallbackUrl(): Promise<string> {
   if (!url) {
     throw new Error('Callback URL Lovense manquante. Configurez-la dans /dashboard/settings.');
   }
-  return url;
+  return normalizeCallbackUrl(url);
+}
+
+function normalizeCallbackUrl(rawUrl: string): string {
+  const trimmed = rawUrl.trim();
+
+  try {
+    const url = new URL(trimmed);
+    if (url.pathname === '/' || url.pathname === '') {
+      url.pathname = '/api/lovense/callback';
+    }
+    return url.toString();
+  } catch {
+    return trimmed;
+  }
 }
 
 interface QrCodePayload {
@@ -63,6 +77,7 @@ interface QrCodePayload {
 export async function requestQrCode(payload: QrCodePayload): Promise<LovensePairResponse> {
   const token = await getDeveloperToken();
   const callbackUrl = await getCallbackUrl();
+  console.log('Lovense callback URL utilisée:', callbackUrl);
 
   const res = await fetch(LOVENSE_QR_ENDPOINT, {
     method: "POST",
@@ -75,6 +90,7 @@ export async function requestQrCode(payload: QrCodePayload): Promise<LovensePair
       uname: payload.uname,
       utoken: payload.utoken,
       callbackUrl,
+      callback_url: callbackUrl,
       v: 2,
     }),
     cache: "no-store",

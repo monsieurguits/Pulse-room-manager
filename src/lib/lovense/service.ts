@@ -25,11 +25,14 @@ export async function generateQRCode(memberId: string) {
     username: true,
     lovenseUserId: true,
     qrImageUrl: true,
+    deviceDomain: true,
+    httpsPort: true,
   },
 });
 
-  // Si un QR existe déjà, on le réutilise
-  if (member.qrImageUrl) {
+  // Si un QR existe déjà et que le callback a déjà fourni le domaine, on le réutilise.
+  // Sinon on régénère un QR pour forcer Lovense à utiliser la callback actuelle.
+  if (member.qrImageUrl && member.deviceDomain && member.httpsPort) {
     return {
       result: true,
       data: {
@@ -55,6 +58,10 @@ export async function generateQRCode(memberId: string) {
     data: {
       lovenseUserId: member.id,
       qrImageUrl: response.data.qr,
+      deviceDomain: null,
+      httpsPort: null,
+      wsPort: null,
+      connected: false,
     },
   });
 
