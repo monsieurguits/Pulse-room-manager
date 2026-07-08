@@ -55,7 +55,7 @@ export async function loginAdmin(_prev: LoginFormState, formData: FormData): Pro
 
   await createAdminSession(user.id);
   if (user.role === 'MODEL' && user.legalAcceptedVersion !== LEGAL_TERMS_VERSION) {
-    redirect('/legal/accept');
+    redirect('/subscription');
   }
 
   redirect('/dashboard');

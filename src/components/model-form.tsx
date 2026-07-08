@@ -12,10 +12,14 @@ export function ModelForm() {
 
   useEffect(() => {
     if (state.success) {
-      toast.success('Compte modèle créé.');
+      if (state.emailWarning) {
+        toast.warning(`Compte modèle créé, mais email non envoyé : ${state.emailWarning}`);
+      } else {
+        toast.success('Compte modèle créé et email de bienvenue envoyé.');
+      }
       formRef.current?.reset();
     }
-  }, [state.success]);
+  }, [state.success, state.emailWarning]);
 
   return (
     <form ref={formRef} action={formAction} className="card grid gap-4 p-5 lg:grid-cols-[1fr_1fr_1fr_auto]">

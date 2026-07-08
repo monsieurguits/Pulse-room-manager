@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { hashPassword, requireOwner } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { sendModelWelcomeEmail } from '@/lib/email';
 
 const modelSchema = z.object({
   name: z.string().min(2, 'Nom requis.'),
@@ -11,10 +12,10 @@ const modelSchema = z.object({
   password: z.string().min(8, '8 caractères minimum.'),
 });
 
-export type ModelFormState = { errors?: Record<string, string[]>; success?: boolean };
+export type ModelFormState = { errors?: Record<string, string[]>; success?: boolean; emailWarning?: string };
 
 export async function createModelAdmin(_prev: ModelFormState, formData: FormData): Promise<ModelFormState> {
-  await requireOwner();
+  const owner = await requireOwner();
 
   const parsed = modelSchema.safeParse({
     name: formData.get('name'),
@@ -42,6 +43,21 @@ export async function createModelAdmin(_prev: ModelFormState, formData: FormData
   });
 
   revalidatePath('/models');
+
+  try {
+    await sendModelWelcomeEmail({
+      modelName: parsed.data.name.trim(),
+      modelEmail: email,
+      temporaryPassword: parsed.data.password,
+      adminEmail: owner.email,
+    });
+  } catch (error) {
+    return {
+      success: true,
+      emailWarning: (error as Error).message,
+    };
+  }
+
   return { success: true };
 }
 
