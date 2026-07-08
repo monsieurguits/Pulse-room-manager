@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { stopSession } from '@/lib/session-engine';
-import { canAccessMember, requireAdmin } from '@/lib/auth';
+import { canAccessMember, memberOwnerWhere, requireAdmin } from '@/lib/auth';
 
 const memberSchema = z.object({
   username: z.string().min(2, 'Le pseudo doit contenir au moins 2 caractères.'),
@@ -95,6 +95,39 @@ export async function deleteMember(memberId: string): Promise<void> {
   await db.member.delete({ where: { id: memberId } });
   revalidatePath('/members');
   revalidatePath('/dashboard');
+}
+
+export async function deleteMembers(memberIds: string[]): Promise<{ deleted: number }> {
+  const admin = await requireAdmin();
+  const ids = [...new Set(memberIds)].filter(Boolean);
+
+  if (ids.length === 0) {
+    return { deleted: 0 };
+  }
+
+  const members = await db.member.findMany({
+    where: {
+      ...memberOwnerWhere(admin),
+      id: { in: ids },
+    },
+    select: { id: true },
+  });
+
+  const accessibleIds = members.map((member) => member.id);
+
+  await Promise.all(accessibleIds.map((memberId) => stopSession(memberId, 'manual').catch(() => undefined)));
+
+  const result = await db.member.deleteMany({
+    where: {
+      ...memberOwnerWhere(admin),
+      id: { in: accessibleIds },
+    },
+  });
+
+  revalidatePath('/members');
+  revalidatePath('/dashboard');
+
+  return { deleted: result.count };
 }
 
 export async function suspendMember(memberId: string, suspend: boolean): Promise<void> {

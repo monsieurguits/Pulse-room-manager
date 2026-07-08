@@ -1,16 +1,27 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import type { Member } from '@prisma/client';
 import { toast } from 'sonner';
-import { Copy, ExternalLink, Pencil, RotateCcw, Ban, Trash2, QrCode } from 'lucide-react';
+import { Ban, Copy, ExternalLink, Pencil, QrCode, RotateCcw, Trash2 } from 'lucide-react';
 import { StatusBadge, deriveMemberStatus } from '@/components/status-badge';
 import { MemberTierBadge } from '@/components/member-tier-badge';
 import { buildMemberInviteMessage } from '@/lib/member-invite-message';
 import { formatDuration } from '@/lib/utils';
-import { deleteMember, suspendMember, resetCredit } from '@/server-actions/members';
+import { deleteMember, deleteMembers, suspendMember, resetCredit } from '@/server-actions/members';
 
 export function MembersTable({ members }: { members: Member[] }) {
+  const router = useRouter();
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isPending, startTransition] = useTransition();
+  const selectedCount = selectedIds.length;
+  const allVisibleSelected = useMemo(
+    () => members.length > 0 && members.every((member) => selectedIds.includes(member.id)),
+    [members, selectedIds]
+  );
+
   if (members.length === 0) {
     return <p className="p-6 text-center text-sm text-neutral-500">Aucun membre ne correspond à ces critères.</p>;
   }
@@ -22,8 +33,76 @@ export function MembersTable({ members }: { members: Member[] }) {
     toast.success('Message avec lien copié dans le presse-papiers.');
   }
 
+  function toggleMember(memberId: string) {
+    setSelectedIds((current) =>
+      current.includes(memberId) ? current.filter((id) => id !== memberId) : [...current, memberId]
+    );
+  }
+
+  function toggleAllVisible() {
+    setSelectedIds((current) => {
+      if (allVisibleSelected) {
+        const visibleIds = new Set(members.map((member) => member.id));
+        return current.filter((id) => !visibleIds.has(id));
+      }
+      return [...new Set([...current, ...members.map((member) => member.id)])];
+    });
+  }
+
+  function deleteSelected() {
+    if (selectedIds.length === 0) return;
+    const label = selectedIds.length > 1 ? `${selectedIds.length} membres` : 'ce membre';
+    if (!confirm(`Supprimer définitivement ${label} ?`)) return;
+
+    startTransition(() => {
+      deleteMembers(selectedIds)
+        .then((result) => {
+          setSelectedIds([]);
+          router.refresh();
+          toast.success(`${result.deleted} membre(s) supprimé(s).`);
+        })
+        .catch((error) => toast.error((error as Error).message || 'Suppression impossible.'));
+    });
+  }
+
+  function deleteOne(member: Member) {
+    if (!confirm(`Supprimer définitivement ${member.username} ?`)) return;
+
+    startTransition(() => {
+      deleteMember(member.id)
+        .then(() => {
+          setSelectedIds((current) => current.filter((id) => id !== member.id));
+          router.refresh();
+          toast.success('Membre supprimé.');
+        })
+        .catch((error) => toast.error((error as Error).message || 'Suppression impossible.'));
+    });
+  }
+
   return (
     <>
+      <div className="flex flex-col gap-3 border-b border-base-800 bg-base-900/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <label className="inline-flex items-center gap-3 text-sm text-neutral-300">
+          <input
+            type="checkbox"
+            checked={allVisibleSelected}
+            onChange={toggleAllVisible}
+            className="h-4 w-4 rounded border-base-700 bg-base-950 accent-accent-500"
+          />
+          Tout sélectionner sur cette page
+        </label>
+
+        <button
+          type="button"
+          disabled={selectedCount === 0 || isPending}
+          onClick={deleteSelected}
+          className="btn-secondary justify-center text-red-300 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Trash2 size={16} />
+          {isPending ? 'Suppression...' : `Supprimer la sélection${selectedCount > 0 ? ` (${selectedCount})` : ''}`}
+        </button>
+      </div>
+
       <div className="divide-y divide-base-800 md:hidden">
         {members.map((member) => {
           const status = deriveMemberStatus(member);
@@ -31,10 +110,20 @@ export function MembersTable({ members }: { members: Member[] }) {
             <article key={member.id} className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <Link href={`/members/${member.id}`} className="break-words font-semibold text-neutral-100">
-                    {member.username}
-                  </Link>
-                  <p className="mt-1 text-xs text-neutral-500">{member.platform}</p>
+                  <label className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(member.id)}
+                      onChange={() => toggleMember(member.id)}
+                      className="mt-1 h-4 w-4 rounded border-base-700 bg-base-950 accent-accent-500"
+                    />
+                    <span>
+                      <Link href={`/members/${member.id}`} className="break-words font-semibold text-neutral-100">
+                        {member.username}
+                      </Link>
+                      <span className="mt-1 block text-xs text-neutral-500">{member.platform}</span>
+                    </span>
+                  </label>
                 </div>
                 <StatusBadge status={status} />
               </div>
@@ -46,7 +135,7 @@ export function MembersTable({ members }: { members: Member[] }) {
                 <InfoLine label="Crédit" value={formatDuration(member.remainingCredit)} />
                 <InfoLine label="Expiration" value={new Date(member.endDate).toLocaleDateString('fr-FR')} />
               </div>
-              <MemberActions member={member} copyLink={copyLink} />
+              <MemberActions member={member} copyLink={copyLink} deleteOne={deleteOne} isPending={isPending} />
             </article>
           );
         })}
@@ -56,6 +145,9 @@ export function MembersTable({ members }: { members: Member[] }) {
         <table className="min-w-[920px] w-full text-left text-sm">
           <thead>
             <tr className="border-b border-base-800 bg-base-850/50 text-neutral-500">
+              <th className="px-4 py-3 font-medium">
+                <span className="sr-only">Sélection</span>
+              </th>
               <th className="px-4 py-3 font-medium">Pseudo</th>
               <th className="px-4 py-3 font-medium">Niveau</th>
               <th className="px-4 py-3 font-medium">Plateforme</th>
@@ -70,6 +162,15 @@ export function MembersTable({ members }: { members: Member[] }) {
               const status = deriveMemberStatus(member);
               return (
                 <tr key={member.id} className="border-b border-base-800/60 text-neutral-300 hover:bg-base-850/40">
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(member.id)}
+                      onChange={() => toggleMember(member.id)}
+                      className="h-4 w-4 rounded border-base-700 bg-base-950 accent-accent-500"
+                      aria-label={`Sélectionner ${member.username}`}
+                    />
+                  </td>
                   <td className="px-4 py-3 font-medium text-neutral-100">
                     <Link href={`/members/${member.id}`}>{member.username}</Link>
                   </td>
@@ -83,7 +184,7 @@ export function MembersTable({ members }: { members: Member[] }) {
                   <td className="px-4 py-3">{formatDuration(member.remainingCredit)}</td>
                   <td className="px-4 py-3">{new Date(member.endDate).toLocaleDateString('fr-FR')}</td>
                   <td className="px-4 py-3">
-                    <MemberActions member={member} copyLink={copyLink} table />
+                    <MemberActions member={member} copyLink={copyLink} deleteOne={deleteOne} isPending={isPending} table />
                   </td>
                 </tr>
               );
@@ -107,10 +208,14 @@ function InfoLine({ label, value }: { label: string; value: string }) {
 function MemberActions({
   member,
   copyLink,
+  deleteOne,
+  isPending,
   table = false,
 }: {
   member: Member;
   copyLink: (member: Member) => void;
+  deleteOne: (member: Member) => void;
+  isPending: boolean;
   table?: boolean;
 }) {
   return (
@@ -164,11 +269,8 @@ function MemberActions({
       </button>
       <button
         title="Supprimer"
-        onClick={() => {
-          if (confirm(`Supprimer définitivement ${member.username} ?`)) {
-            deleteMember(member.id).then(() => toast.success('Membre supprimé.'));
-          }
-        }}
+        disabled={isPending}
+        onClick={() => deleteOne(member)}
         className="rounded-lg p-2 text-neutral-400 hover:bg-base-800 hover:text-red-400"
       >
         <Trash2 size={16} className="mx-auto" />
