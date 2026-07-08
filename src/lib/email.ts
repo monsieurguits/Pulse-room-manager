@@ -5,7 +5,7 @@ interface WelcomeModelEmailInput {
   adminEmail: string;
 }
 
-const DEFAULT_APP_URL = 'https://pulse-room-manager.vercel.app';
+const DEFAULT_APP_URL = 'https://pulse-room.app';
 
 function getAppUrl(): string {
   const raw =
