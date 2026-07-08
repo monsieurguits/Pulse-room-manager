@@ -21,7 +21,7 @@ function getAppUrl(): string {
   return raw.replace(/\/$/, '');
 }
 
-export function getStripe(): Stripe | null {
+function getStripe(): Stripe | null {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) return null;
 
