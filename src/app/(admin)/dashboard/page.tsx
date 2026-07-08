@@ -14,6 +14,12 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="rounded-2xl border border-white/10 bg-base-900/70 px-5 py-4 text-center shadow-xl shadow-black/20 backdrop-blur-xl">
+        <p className="text-sm font-medium text-neutral-300 sm:text-base">
+          Hello, <span className="font-semibold text-neutral-50">{admin.name}</span>, nous vous souhaitons une belle journée.
+        </p>
+      </div>
+
       <div>
         <h1 className="text-2xl font-bold text-neutral-50">Tableau de bord</h1>
         <p className="mt-1 text-sm text-neutral-400">Vue d&apos;ensemble de l&apos;activité en temps réel.</p>
