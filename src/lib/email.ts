@@ -5,6 +5,11 @@ interface WelcomeModelEmailInput {
   adminEmail: string;
 }
 
+interface PasswordChangedEmailInput {
+  name: string;
+  email: string;
+}
+
 const DEFAULT_APP_URL = 'https://pulse-room.app';
 const PUBLIC_APP_URL = 'https://pulse-room.app';
 
@@ -241,6 +246,124 @@ export async function sendModelWelcomeEmail(input: WelcomeModelEmailInput): Prom
   if (!response.ok) {
     const error = await response.text().catch(() => '');
     throw new Error(error || "L'email de bienvenue n'a pas pu être envoyé.");
+  }
+}
+
+export async function sendPasswordChangedEmail(input: PasswordChangedEmailInput): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.EMAIL_FROM;
+
+  if (!apiKey || !from) {
+    throw new Error('Configuration email manquante : RESEND_API_KEY et EMAIL_FROM sont requis.');
+  }
+
+  const supportEmail = 'contact@pulse-room.app';
+  const loginUrl = `${PUBLIC_APP_URL}/login`;
+  const logoUrl = `${PUBLIC_APP_URL}/pulseroom-logo-transparent.png`;
+  const subject = 'PULSEROOM – Confirmation de changement de mot de passe';
+
+  const text = [
+    `Bonjour ${input.name},`,
+    '',
+    'Nous vous confirmons que le mot de passe de votre compte PULSEROOM vient d’être modifié.',
+    '',
+    `Lien d'accès à votre espace : ${loginUrl}`,
+    `Identifiant : ${input.email}`,
+    '',
+    'Pour des raisons de sécurité, le nouveau mot de passe n’est pas affiché dans cet e-mail.',
+    '',
+    "Si vous n’êtes pas à l’origine de cette modification, contactez immédiatement le support : contact@pulse-room.app.",
+    '',
+    'Cordialement,',
+    '',
+    'L’équipe PULSEROOM',
+  ].join('\n');
+
+  const html = `
+    <div style="margin:0;padding:0;background:#06060b;font-family:Arial,Helvetica,sans-serif;color:#f8fafc;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;background:#06060b;">
+        <tr>
+          <td align="center" style="padding:38px 16px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;max-width:720px;border-collapse:separate;border-spacing:0;">
+              <tr>
+                <td style="border-radius:28px;overflow:hidden;border:1px solid rgba(255,255,255,.14);background:#0b0b13;box-shadow:0 28px 80px rgba(0,0,0,.45);">
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                    <tr>
+                      <td style="padding:0;background:linear-gradient(135deg,#ff2e6d 0%,#8b5cf6 46%,#00d8ff 100%);">
+                        <div style="padding:1px;">
+                          <div style="padding:34px 28px 30px;text-align:center;background:linear-gradient(180deg,rgba(10,10,18,.62),rgba(10,10,18,.92));">
+                            <img src="${logoUrl}" alt="PULSEROOM" style="width:168px;height:auto;margin:0 auto 18px;display:block;" />
+                            <div style="display:inline-block;margin:0 0 16px;padding:7px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.09);color:#e2e8f0;font-size:12px;letter-spacing:.08em;text-transform:uppercase;">Sécurité du compte</div>
+                            <h1 style="margin:0;color:#ffffff;font-size:30px;line-height:1.15;font-weight:800;">Mot de passe modifié</h1>
+                            <p style="margin:12px auto 0;max-width:520px;color:#dbeafe;font-size:15px;line-height:1.65;">Votre compte PULSEROOM a bien été mis à jour.</p>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td style="padding:32px 30px;background:#0b0b13;">
+                        <p style="margin:0 0 18px;color:#f8fafc;font-size:16px;">Bonjour ${escapeHtml(input.name)},</p>
+                        <p style="margin:0;color:#cbd5e1;font-size:15px;line-height:1.75;">Nous vous confirmons que le mot de passe de votre compte PULSEROOM vient d’être modifié.</p>
+
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:22px;border-radius:22px;border:1px solid rgba(0,216,255,.28);background:linear-gradient(135deg,rgba(0,216,255,.11),rgba(255,46,109,.08));">
+                          <tr>
+                            <td style="padding:24px;">
+                              <h2 style="margin:0 0 18px;color:#ffffff;font-size:19px;line-height:1.25;">Informations du compte</h2>
+                              <p style="margin:0 0 7px;color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:.07em;">Lien d’accès à votre espace</p>
+                              <p style="margin:0 0 16px;color:#67e8f9;font-size:15px;font-weight:700;">${loginUrl}</p>
+                              <p style="margin:0 0 7px;color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:.07em;">Identifiant</p>
+                              <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;">${escapeHtml(input.email)}</p>
+                            </td>
+                          </tr>
+                        </table>
+
+                        <div style="margin-top:20px;border-radius:18px;border:1px solid rgba(255,46,109,.28);background:rgba(255,46,109,.08);padding:16px 18px;">
+                          <p style="margin:0;color:#ffd1df;font-size:14px;line-height:1.65;"><strong>Sécurité :</strong> le nouveau mot de passe n’est pas affiché dans cet e-mail.</p>
+                        </div>
+
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:20px;border-radius:20px;background:#11111c;border:1px solid rgba(255,255,255,.1);">
+                          <tr>
+                            <td style="padding:20px;">
+                              <h2 style="margin:0 0 10px;color:#ffffff;font-size:18px;">Besoin d’aide ?</h2>
+                              <p style="margin:0;color:#cbd5e1;font-size:14px;line-height:1.7;">Si vous n’êtes pas à l’origine de cette modification, contactez immédiatement le support : <a href="mailto:${supportEmail}" style="color:#67e8f9;text-decoration:none;font-weight:700;">${supportEmail}</a>.</p>
+                            </td>
+                          </tr>
+                        </table>
+
+                        <p style="margin:24px 0 0;color:#ffffff;font-size:15px;font-weight:800;">L’équipe PULSEROOM</p>
+                        <p style="margin:5px 0 0;color:#94a3b8;font-size:13px;">La solution professionnelle de gestion des accès et du contrôle Lovense.</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from,
+      to: [input.email],
+      reply_to: supportEmail,
+      subject,
+      html,
+      text,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text().catch(() => '');
+    throw new Error(error || "L'email de confirmation n'a pas pu être envoyé.");
   }
 }
 

@@ -12,6 +12,7 @@ import {
   verifyPassword,
 } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { sendPasswordChangedEmail } from '@/lib/email';
 
 const loginSchema = z.object({
   email: z.string().email('Email invalide.'),
@@ -30,7 +31,7 @@ const passwordSchema = z
   });
 
 export type LoginFormState = { error?: string };
-export type PasswordFormState = { errors?: Record<string, string[]>; success?: boolean };
+export type PasswordFormState = { errors?: Record<string, string[]>; success?: boolean; emailWarning?: string };
 export type LegalAcceptanceState = { error?: string };
 
 const allowedSubscriptionPlans = new Set(['starter', 'pro', 'premium']);
@@ -107,6 +108,19 @@ export async function changeOwnPassword(_prev: PasswordFormState, formData: Form
   await db.adminSession.deleteMany({ where: { userId: admin.id } });
 
   await createAdminSession(admin.id);
+
+  try {
+    await sendPasswordChangedEmail({
+      name: user.name,
+      email: user.email,
+    });
+  } catch (error) {
+    return {
+      success: true,
+      emailWarning: (error as Error).message,
+    };
+  }
+
   return { success: true };
 }
 

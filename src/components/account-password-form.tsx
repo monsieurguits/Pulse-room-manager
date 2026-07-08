@@ -12,10 +12,14 @@ export function AccountPasswordForm() {
 
   useEffect(() => {
     if (state.success) {
-      toast.success('Mot de passe mis à jour.');
+      if (state.emailWarning) {
+        toast.warning(`Mot de passe mis à jour, mais email non envoyé : ${state.emailWarning}`);
+      } else {
+        toast.success('Mot de passe mis à jour et email de confirmation envoyé.');
+      }
       formRef.current?.reset();
     }
-  }, [state.success]);
+  }, [state.success, state.emailWarning]);
 
   return (
     <form ref={formRef} action={formAction} className="card flex max-w-2xl flex-col gap-4 p-5">
