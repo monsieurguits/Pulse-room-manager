@@ -8,3 +8,5 @@ dev.db-journal
 .DS_Store
 Terminal
 tsconfig.tsbuildinfo
+.vercel
+.env*
