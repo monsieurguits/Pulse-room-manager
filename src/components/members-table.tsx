@@ -28,8 +28,7 @@ export function MembersTable({ members }: { members: Member[] }) {
   }
 
   function copyLink(member: Member) {
-    const joinUrl = `${window.location.origin}/join`;
-    navigator.clipboard.writeText(buildMemberInviteMessage({ username: member.username, joinUrl, accessCode: member.accessCode }));
+    navigator.clipboard.writeText(buildMemberInviteMessage({ username: member.username, accessCode: member.accessCode }));
     toast.success('Message avec code copié dans le presse-papiers.');
   }
 

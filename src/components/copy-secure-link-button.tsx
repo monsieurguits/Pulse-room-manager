@@ -9,8 +9,7 @@ export function CopySecureLinkButton({ username, accessCode }: { username: strin
     <button
       className="btn-secondary"
       onClick={() => {
-        const joinUrl = `${window.location.origin}/join`;
-        navigator.clipboard.writeText(buildMemberInviteMessage({ username, joinUrl, accessCode }));
+        navigator.clipboard.writeText(buildMemberInviteMessage({ username, accessCode }));
         toast.success('Message avec code copié.');
       }}
     >
