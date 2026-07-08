@@ -10,11 +10,12 @@ import { StatusBadge, deriveMemberStatus } from '@/components/status-badge';
 import { MemberTierBadge } from '@/components/member-tier-badge';
 import { buildMemberInviteMessage } from '@/lib/member-invite-message';
 import { formatDuration } from '@/lib/utils';
-import { deleteMember, deleteMembers, suspendMember, resetCredit } from '@/server-actions/members';
+import { deleteMembers, suspendMember, resetCredit } from '@/server-actions/members';
 
 export function MembersTable({ members }: { members: Member[] }) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleteRequest, setDeleteRequest] = useState<{ ids: string[]; label: string } | null>(null);
   const [isPending, startTransition] = useTransition();
   const selectedCount = selectedIds.length;
   const allVisibleSelected = useMemo(
@@ -52,31 +53,31 @@ export function MembersTable({ members }: { members: Member[] }) {
   function deleteSelected() {
     if (selectedIds.length === 0) return;
     const label = selectedIds.length > 1 ? `${selectedIds.length} membres` : 'ce membre';
-    if (!confirm(`Supprimer définitivement ${label} ?`)) return;
+    setDeleteRequest({ ids: selectedIds, label });
+  }
+
+  function confirmDeleteRequest() {
+    if (!deleteRequest) return;
+    const idsToDelete = deleteRequest.ids;
 
     startTransition(() => {
-      deleteMembers(selectedIds)
+      deleteMembers(idsToDelete)
         .then((result) => {
           setSelectedIds([]);
+          setDeleteRequest(null);
           router.refresh();
-          toast.success(`${result.deleted} membre(s) supprimé(s).`);
+          if (result.deleted > 0) {
+            toast.success(`${result.deleted} membre(s) supprimé(s).`);
+          } else {
+            toast.warning('Aucun membre supprimé.');
+          }
         })
         .catch((error) => toast.error((error as Error).message || 'Suppression impossible.'));
     });
   }
 
   function deleteOne(member: Member) {
-    if (!confirm(`Supprimer définitivement ${member.username} ?`)) return;
-
-    startTransition(() => {
-      deleteMember(member.id)
-        .then(() => {
-          setSelectedIds((current) => current.filter((id) => id !== member.id));
-          router.refresh();
-          toast.success('Membre supprimé.');
-        })
-        .catch((error) => toast.error((error as Error).message || 'Suppression impossible.'));
-    });
+    setDeleteRequest({ ids: [member.id], label: member.username });
   }
 
   return (
@@ -192,6 +193,44 @@ export function MembersTable({ members }: { members: Member[] }) {
           </tbody>
         </table>
       </div>
+
+      {deleteRequest ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-base-900 p-5 shadow-2xl shadow-black/40">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/15 text-red-300">
+                <Trash2 size={20} />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-neutral-50">Confirmer la suppression</h2>
+                <p className="mt-2 text-sm leading-6 text-neutral-400">
+                  Voulez-vous supprimer définitivement {deleteRequest.label} ? Cette action supprimera aussi ses sessions et
+                  événements associés.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                className="btn-secondary justify-center"
+                disabled={isPending}
+                onClick={() => setDeleteRequest(null)}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="btn-accent justify-center bg-red-500 text-white hover:bg-red-400"
+                disabled={isPending}
+                onClick={confirmDeleteRequest}
+              >
+                {isPending ? 'Suppression...' : 'Supprimer définitivement'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
