@@ -1,32 +1,15 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import Stripe from 'stripe';
 import { hasAcceptedCurrentLegalTerms, requireAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { getAppUrl, getStripe } from '@/lib/stripe';
 
 const STRIPE_PRICE_IDS = {
   starter: process.env.STRIPE_PRICE_STARTER_ID,
   pro: process.env.STRIPE_PRICE_PRO_ID,
   premium: process.env.STRIPE_PRICE_PREMIUM_ID,
 } as const;
-
-function getAppUrl(): string {
-  const raw =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.APP_DOMAIN ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') ||
-    'https://pulse-room.app';
-
-  return raw.replace(/\/$/, '');
-}
-
-function getStripe(): Stripe | null {
-  const secretKey = process.env.STRIPE_SECRET_KEY;
-  if (!secretKey) return null;
-
-  return new Stripe(secretKey);
-}
 
 export async function createStripeCheckoutSession(formData: FormData): Promise<void> {
   const admin = await requireAdmin();

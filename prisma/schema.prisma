@@ -59,6 +59,7 @@ model Member {
   sessions Session[]
   tipCommands TipCommand[]
   overlayEvents ControlOverlayEvent[]
+  creditPurchases MemberCreditPurchase[]
 
   createdAt DateTime @updatedAt @default(now())
   updatedAt DateTime @updatedAt
@@ -86,6 +87,8 @@ model AdminUser {
   subscriptionStartedAt DateTime?
   subscriptionEndsAt DateTime?
   weatherCity String?
+  stripeConnectAccountId String?
+  stripeConnectOnboardingComplete Boolean @default(false)
   overlayToken String? @unique
   overlayLiveActive Boolean @default(false)
   overlayLiveMemberId String?
@@ -99,12 +102,41 @@ model AdminUser {
   members  Member[]
   sessions AdminSession[]
   overlayEvents ControlOverlayEvent[]
+  creditPurchases MemberCreditPurchase[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([role])
   @@index([active])
+}
+
+model MemberCreditPurchase {
+  id      String @id @default(cuid())
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  ownerId  String?
+  owner    AdminUser? @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  packId   String
+  label    String
+  seconds  Int
+  amountCents Int
+  currency String @default("eur")
+  platformFeeCents Int @default(0)
+  modelRevenueCents Int @default(0)
+
+  stripeSessionId String? @unique
+  stripePaymentIntentId String?
+  stripeConnectAccountId String?
+  status String @default("pending") // pending | paid | failed
+
+  createdAt DateTime @default(now())
+  paidAt DateTime?
+
+  @@index([memberId, createdAt])
+  @@index([ownerId, createdAt])
+  @@index([status, createdAt])
 }
 
 model AdminSession {

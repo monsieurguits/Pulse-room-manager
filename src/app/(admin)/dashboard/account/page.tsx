@@ -2,6 +2,7 @@ import Link from 'next/link';
 import {
   BadgeEuro,
   CalendarDays,
+  CreditCard,
   Crown,
   KeyRound,
   LifeBuoy,
@@ -15,9 +16,11 @@ import {
 import { AccountPasswordForm } from '@/components/account-password-form';
 import { AccountProfileForm } from '@/components/account-profile-form';
 import { WeatherCityForm } from '@/components/weather-city-form';
+import { formatEuros } from '@/lib/credit-packs';
 import { LEGAL_TERMS_VERSION, memberOwnerWhere, requireAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { logoutAllAdminSessions } from '@/server-actions/auth';
+import { createStripeConnectAccountLink } from '@/server-actions/stripe-connect';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,13 +64,41 @@ function addOneMonth(date: Date | null | undefined) {
 
 export default async function AccountPage() {
   const admin = await requireAdmin();
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
 
-  const [user, totalMembers, connectedMembers, activeAdminSessions, openControlSessions] = await Promise.all([
+  const [
+    user,
+    totalMembers,
+    connectedMembers,
+    activeAdminSessions,
+    openControlSessions,
+    monthlyCreditRevenue,
+    recentCreditPurchases,
+  ] = await Promise.all([
     db.adminUser.findUnique({ where: { id: admin.id } }),
     db.member.count({ where: memberOwnerWhere(admin) }),
     db.member.count({ where: { ...memberOwnerWhere(admin), connected: true } }),
     db.adminSession.count({ where: { userId: admin.id, expiresAt: { gt: new Date() } } }),
     db.session.count({ where: admin.role === 'OWNER' ? { active: true } : { active: true, member: { ownerId: admin.id } } }),
+    db.memberCreditPurchase.aggregate({
+      where: {
+        ...(admin.role === 'OWNER' ? {} : { ownerId: admin.id }),
+        status: 'paid',
+        paidAt: { gte: monthStart },
+      },
+      _sum: { modelRevenueCents: true, amountCents: true, platformFeeCents: true },
+    }),
+    db.memberCreditPurchase.findMany({
+      where: {
+        ...(admin.role === 'OWNER' ? {} : { ownerId: admin.id }),
+        status: 'paid',
+      },
+      include: { member: { select: { username: true } } },
+      orderBy: { paidAt: 'desc' },
+      take: 6,
+    }),
   ]);
 
   if (!user) {
@@ -77,6 +108,10 @@ export default async function AccountPage() {
   const displayedSubscriptionPlan = user.subscriptionPlan ?? (user.legalAcceptedAt ? 'trial' : null);
   const displayedSubscriptionStart = user.subscriptionStartedAt ?? user.legalAcceptedAt;
   const displayedSubscriptionEnd = user.subscriptionEndsAt ?? addOneMonth(user.legalAcceptedAt);
+  const creditRevenueCents =
+    admin.role === 'OWNER'
+      ? monthlyCreditRevenue._sum.platformFeeCents ?? 0
+      : monthlyCreditRevenue._sum.modelRevenueCents ?? 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -95,7 +130,7 @@ export default async function AccountPage() {
         <SummaryCard icon={ShieldCheck} label="Statut du compte" value={user.active ? 'Actif' : 'Suspendu'} />
         <SummaryCard icon={LockKeyhole} label="Sessions admin ouvertes" value={String(activeAdminSessions)} />
         <SummaryCard icon={Vibrate} label="Membres Lovense connectés" value={`${connectedMembers}/${totalMembers}`} />
-        <SummaryCard icon={BadgeEuro} label="Revenu crédits ce mois" value="0,00 €" />
+        <SummaryCard icon={BadgeEuro} label="Revenu crédits ce mois" value={formatEuros(creditRevenueCents)} />
       </div>
 
       <section className="card p-5">
@@ -182,6 +217,50 @@ export default async function AccountPage() {
             </Link>
           </div>
         ) : null}
+      </section>
+
+      <section className="card p-5">
+        <SectionHeader
+          icon={CreditCard}
+          title="Paiements et revenus crédits"
+          description="Stripe Connect permet au modèle de recevoir ses revenus avec commission plateforme."
+        />
+        <div className="grid gap-4 sm:grid-cols-3">
+          <InfoItem label="Compte Stripe" value={user.stripeConnectAccountId ? 'Connecté' : 'Non connecté'} />
+          <InfoItem label="Validation Stripe" value={user.stripeConnectOnboardingComplete ? 'Terminée' : 'À finaliser'} />
+          <InfoItem label="Revenu du mois" value={formatEuros(creditRevenueCents)} />
+        </div>
+        {user.role === 'MODEL' ? (
+          <form action={createStripeConnectAccountLink} className="mt-5">
+            <button type="submit" className="btn-accent w-full justify-center sm:w-auto">
+              <CreditCard size={17} />
+              {user.stripeConnectAccountId ? 'Gérer mon compte Stripe' : 'Connecter Stripe'}
+            </button>
+          </form>
+        ) : null}
+        <div className="mt-5 rounded-2xl border border-base-800 bg-base-950/70 p-4">
+          <h3 className="text-sm font-semibold text-neutral-200">Derniers achats de crédits</h3>
+          {recentCreditPurchases.length > 0 ? (
+            <div className="mt-3 space-y-3">
+              {recentCreditPurchases.map((purchase) => (
+                <div key={purchase.id} className="flex items-center justify-between gap-3 border-t border-base-800 pt-3 text-sm first:border-t-0 first:pt-0">
+                  <div>
+                    <p className="font-medium text-neutral-100">{purchase.member.username}</p>
+                    <p className="mt-0.5 text-xs text-neutral-500">{purchase.label}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-neutral-100">
+                      {formatEuros(admin.role === 'OWNER' ? purchase.platformFeeCents : purchase.modelRevenueCents)}
+                    </p>
+                    <p className="mt-0.5 text-xs text-neutral-500">Achat {formatEuros(purchase.amountCents)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-neutral-500">Aucun achat de crédit payé pour le moment.</p>
+          )}
+        </div>
       </section>
 
       <div className="grid gap-6 xl:grid-cols-2">

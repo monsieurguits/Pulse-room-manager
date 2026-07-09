@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import {
   Activity,
@@ -593,9 +594,12 @@ export function ControlPanel({
               )}
 
               {realtime.remainingCredit <= 0 && (
-                <p className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-center text-sm text-red-300">
-                  Crédit épuisé pour cette semaine.
-                </p>
+                <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-center text-sm text-red-300">
+                  <p>Crédit épuisé pour cette semaine.</p>
+                  <Link href={`/control/${secureToken}/credits`} className="btn-accent mt-3 w-full justify-center">
+                    Acheter des crédits
+                  </Link>
+                </div>
               )}
             </div>
           </aside>
