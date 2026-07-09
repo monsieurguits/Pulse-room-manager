@@ -342,10 +342,7 @@ export async function enqueueTipCommand(input: TipCommandInput) {
     },
   });
 
-  const hasActiveMemberControl = await db.session.findFirst({
-    where: { active: true },
-    select: { id: true },
-  });
+  const hasActiveMemberControl = await hasActiveControlForTipMember(tip.memberId);
 
   if (hasActiveMemberControl) {
     broadcast({
@@ -358,7 +355,7 @@ export async function enqueueTipCommand(input: TipCommandInput) {
     return { status: 'queued' as const, tip };
   }
 
-  void processPendingTipCommands().catch(() => undefined);
+  await processPendingTipCommands();
   return { status: 'started' as const, tip };
 }
 
@@ -370,19 +367,15 @@ export async function processPendingTipCommands(): Promise<void> {
 
   if (hasRunningTip) return;
 
-  const hasActiveMemberControl = await db.session.findFirst({
-    where: { active: true },
-    select: { id: true },
-  });
-
-  if (hasActiveMemberControl) return;
-
   const tip = await db.tipCommand.findFirst({
     where: { status: 'pending' },
     orderBy: { createdAt: 'asc' },
   });
 
   if (!tip) return;
+
+  const hasActiveMemberControl = await hasActiveControlForTipMember(tip.memberId);
+  if (hasActiveMemberControl) return;
 
   await db.tipCommand.update({
     where: { id: tip.id },
@@ -432,8 +425,25 @@ export async function processPendingTipCommands(): Promise<void> {
       error: (error as Error).message,
     });
   } finally {
-    void processPendingTipCommands().catch(() => undefined);
+    await processPendingTipCommands().catch(() => undefined);
   }
+}
+
+async function hasActiveControlForTipMember(memberId: string): Promise<boolean> {
+  const tipMember = await db.member.findUnique({
+    where: { id: memberId },
+    select: { ownerId: true },
+  });
+
+  const activeSession = await db.session.findFirst({
+    where: {
+      active: true,
+      member: tipMember?.ownerId ? { ownerId: tipMember.ownerId } : undefined,
+    },
+    select: { id: true },
+  });
+
+  return Boolean(activeSession);
 }
 
 async function executeTipCommand(tip: TipCommand): Promise<LovenseCommandResult> {

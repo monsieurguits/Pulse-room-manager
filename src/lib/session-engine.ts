@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { stop as stopToy } from '@/lib/lovense/service';
+import { processPendingTipCommands, stop as stopToy } from '@/lib/lovense/service';
 import { createControlOverlayEvent } from '@/lib/overlay';
 
 /**
@@ -101,11 +101,10 @@ export async function stopSession(memberId: string, reason: 'manual' | 'credit-e
   // On coupe le jouet uniquement si l'arrêt n'est pas dû à un simple redémarrage serveur
   // (dans ce cas, la commande Stop a déjà été envoyée avant l'arrêt, voir restoreActiveSessions).
   if (reason !== 'restart') {
-    void stopToy(memberId)
-      .catch(() => undefined)
-      .finally(() => triggerPendingTipCommands());
+    await stopToy(memberId).catch(() => undefined);
+    await triggerPendingTipCommands();
   } else {
-    triggerPendingTipCommands();
+    await triggerPendingTipCommands();
   }
 
   await createControlOverlayEvent(memberId, 'control-stopped').catch(() => undefined);
@@ -113,10 +112,8 @@ export async function stopSession(memberId: string, reason: 'manual' | 'credit-e
   return updatedSession;
 }
 
-function triggerPendingTipCommands(): void {
-  import('@/lib/lovense/service')
-    .then(({ processPendingTipCommands }) => processPendingTipCommands())
-    .catch(() => undefined);
+async function triggerPendingTipCommands(): Promise<void> {
+  await processPendingTipCommands().catch(() => undefined);
 }
 
 export async function assertSessionController(memberId: string, controlClientId?: string): Promise<void> {
