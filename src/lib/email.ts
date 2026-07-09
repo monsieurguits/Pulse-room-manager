@@ -378,11 +378,11 @@ export async function sendPasswordChangedEmail(input: PasswordChangedEmailInput)
 
 export async function sendModelContactRequestEmail(input: ModelContactRequestEmailInput): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM;
-  const to = 'contact@pulse-room.fr';
+  const from = process.env.EMAIL_FROM || 'PULSEROOM <support@pulse-room.app>';
+  const to = process.env.CONTACT_REQUEST_TO || 'contact@pulse-room.app';
 
-  if (!apiKey || !from) {
-    throw new Error('Configuration email manquante : RESEND_API_KEY et EMAIL_FROM sont requis.');
+  if (!apiKey || !to) {
+    throw new Error('Configuration email manquante : RESEND_API_KEY et CONTACT_REQUEST_TO sont requis.');
   }
 
   const subject = `Nouvelle demande modèle PULSEROOM - ${input.pseudo}`;
