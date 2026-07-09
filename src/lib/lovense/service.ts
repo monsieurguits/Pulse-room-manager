@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import type { TipCommand } from '@prisma/client';
 import { db } from '@/lib/db';
 import { requestQrCode, sendCommand } from '@/lib/lovense/client';
+import { createUniqueMemberAccessCode } from '@/lib/member-code';
 import { updateOverlayPowerState } from '@/lib/overlay';
 import { broadcast } from '@/lib/websocket/publisher';
 import type { LovenseCallbackPayload, LovenseCommandResult, LovenseToy } from '@/types';
@@ -18,7 +19,7 @@ function utokenFor(memberId: string): string {
 }
 
 /** Génère le QR code d'appairage pour un membre donné. */
-export async function generateQRCode(memberId: string) {
+export async function generateQRCode(memberId: string, options: { forceRefresh?: boolean } = {}) {
   const member = await db.member.findUniqueOrThrow({
   where: { id: memberId },
   select: {
@@ -33,11 +34,12 @@ export async function generateQRCode(memberId: string) {
 
   // Si un QR existe déjà et que le callback a déjà fourni le domaine, on le réutilise.
   // Sinon on régénère un QR pour forcer Lovense à utiliser la callback actuelle.
-  if (member.qrImageUrl && member.deviceDomain && member.httpsPort) {
+  if (!options.forceRefresh && member.qrImageUrl && member.deviceDomain && member.httpsPort) {
     return {
       result: true,
       data: {
         qr: member.qrImageUrl,
+        code: '',
       },
     };
   }
@@ -54,10 +56,14 @@ export async function generateQRCode(memberId: string) {
     );
   }
 
+  const nextAccessCode = options.forceRefresh ? await createUniqueMemberAccessCode() : undefined;
+
   await db.member.update({
     where: { id: memberId },
     data: {
       lovenseUserId: member.id,
+      lovensePairingCode: response.data.code,
+      ...(nextAccessCode ? { accessCode: nextAccessCode } : {}),
       qrImageUrl: response.data.qr,
       deviceDomain: null,
       httpsPort: null,

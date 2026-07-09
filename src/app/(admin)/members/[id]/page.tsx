@@ -59,7 +59,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         </div>
         <InfoCard label="Crédit restant" value={formatDuration(member.remainingCredit)} />
         <InfoCard label="Crédit hebdomadaire" value={formatDuration(member.weeklyCredit)} />
-        <InfoCard label="Code membre" value={member.accessCode ?? 'Non généré'} />
+        <InfoCard label="Code FanClub /join" value={member.accessCode ?? 'Non généré'} />
         <InfoCard label="Expiration" value={new Date(member.endDate).toLocaleDateString('fr-FR')} />
       </div>
 

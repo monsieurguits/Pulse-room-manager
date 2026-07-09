@@ -12,7 +12,12 @@ export default async function MemberQrPage({ params }: { params: Promise<{ id: s
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6">
       <h1 className="text-2xl font-bold text-neutral-50">Appairage — {member.username}</h1>
-      <QrPairingPanel memberId={member.id} />
+      <QrPairingPanel
+        memberId={member.id}
+        initialQrImage={member.qrImageUrl}
+        initialConnectionCode={member.lovensePairingCode}
+        initialAccessCode={member.accessCode}
+      />
     </div>
   );
 }

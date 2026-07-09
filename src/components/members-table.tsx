@@ -132,7 +132,7 @@ export function MembersTable({ members }: { members: Member[] }) {
                   <MemberTierBadge weeklyCredit={member.weeklyCredit} />
                 </div>
                 <InfoLine label="Crédit" value={formatDuration(member.remainingCredit)} />
-                <InfoLine label="Code" value={member.accessCode ?? 'Non généré'} />
+                <InfoLine label="Code FanClub /join" value={member.accessCode ?? 'Non généré'} />
                 <InfoLine label="Expiration" value={new Date(member.endDate).toLocaleDateString('fr-FR')} />
               </div>
               <MemberActions member={member} copyLink={copyLink} deleteOne={deleteOne} isPending={isPending} />
@@ -142,7 +142,7 @@ export function MembersTable({ members }: { members: Member[] }) {
       </div>
 
       <div className="hidden overflow-x-auto md:block">
-        <table className="min-w-[920px] w-full text-left text-sm">
+        <table className="min-w-[980px] w-full text-left text-sm">
           <thead>
             <tr className="border-b border-base-800 bg-base-850/50 text-neutral-500">
               <th className="px-4 py-3 font-medium">
@@ -152,7 +152,7 @@ export function MembersTable({ members }: { members: Member[] }) {
               <th className="px-4 py-3 font-medium">Niveau</th>
               <th className="px-4 py-3 font-medium">Plateforme</th>
               <th className="px-4 py-3 font-medium">Statut</th>
-              <th className="px-4 py-3 font-medium">Code</th>
+              <th className="px-4 py-3 font-medium">Code FanClub</th>
               <th className="px-4 py-3 font-medium">Crédit restant</th>
               <th className="px-4 py-3 font-medium">Expiration</th>
               <th className="px-4 py-3 font-medium text-right">Actions</th>

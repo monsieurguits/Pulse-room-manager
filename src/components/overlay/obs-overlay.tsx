@@ -92,7 +92,7 @@ export function ObsOverlay({ token }: { token: string }) {
         hideTimerRef.current = window.setTimeout(() => {
           setActiveEvent(null);
           hideTimerRef.current = null;
-        }, 8500);
+        }, 10_000);
       }
     }
 

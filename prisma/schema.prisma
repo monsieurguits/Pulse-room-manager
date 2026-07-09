@@ -45,6 +45,7 @@ model Member {
 
   // Intégration Lovense (Standard API / Standard Socket API)
   lovenseUserId String? // identifiant utilisateur Lovense (uid) retourné par l'API
+  lovensePairingCode String? // code de connexion retourné avec le QR Lovense
   toyId         String?
   toyName       String?
   toyType       String?
