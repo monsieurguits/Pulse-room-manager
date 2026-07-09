@@ -35,6 +35,7 @@ export type LoginFormState = { error?: string };
 export type PasswordFormState = { errors?: Record<string, string[]>; success?: boolean; emailWarning?: string };
 export type LegalAcceptanceState = { error?: string };
 export type WeatherCityFormState = { errors?: Record<string, string[]>; success?: boolean };
+export type AccountProfileFormState = { errors?: Record<string, string[]>; success?: boolean };
 
 const weatherCitySchema = z.object({
   weatherCity: z
@@ -43,6 +44,24 @@ const weatherCitySchema = z.object({
     .max(80, '80 caractères maximum.')
     .optional()
     .transform((value) => value || null),
+});
+
+const accountProfileSchema = z.object({
+  name: z.string().trim().min(2, 'Pseudo requis.').max(80, '80 caractères maximum.'),
+  firstName: z
+    .string()
+    .trim()
+    .max(80, '80 caractères maximum.')
+    .optional()
+    .transform((value) => value || null),
+  gender: z
+    .enum(['Femme', 'Homme', 'Neutre', ''])
+    .transform((value) => value || null),
+  birthDate: z
+    .string()
+    .optional()
+    .transform((value) => value || null)
+    .refine((value) => !value || !Number.isNaN(new Date(`${value}T00:00:00`).getTime()), 'Date invalide.'),
 });
 
 const allowedSubscriptionPlans = new Set(['starter', 'pro', 'premium']);
@@ -149,6 +168,39 @@ export async function updateWeatherCity(_prev: WeatherCityFormState, formData: F
   await db.adminUser.update({
     where: { id: admin.id },
     data: { weatherCity: parsed.data.weatherCity },
+  });
+
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/account');
+
+  return { success: true };
+}
+
+export async function updateAccountProfile(
+  _prev: AccountProfileFormState,
+  formData: FormData,
+): Promise<AccountProfileFormState> {
+  const admin = await requireAdmin();
+
+  const parsed = accountProfileSchema.safeParse({
+    name: formData.get('name'),
+    firstName: formData.get('firstName'),
+    gender: formData.get('gender'),
+    birthDate: formData.get('birthDate'),
+  });
+
+  if (!parsed.success) {
+    return { errors: parsed.error.flatten().fieldErrors };
+  }
+
+  await db.adminUser.update({
+    where: { id: admin.id },
+    data: {
+      name: parsed.data.name,
+      firstName: parsed.data.firstName,
+      gender: parsed.data.gender,
+      birthDate: parsed.data.birthDate ? new Date(`${parsed.data.birthDate}T00:00:00`) : null,
+    },
   });
 
   revalidatePath('/dashboard');

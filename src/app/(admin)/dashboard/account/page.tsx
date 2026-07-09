@@ -1,26 +1,22 @@
 import Link from 'next/link';
 import {
-  BadgeCheck,
-  BookOpen,
+  BadgeEuro,
   CalendarDays,
-  CircleHelp,
   Crown,
-  FileText,
   KeyRound,
   LifeBuoy,
   LockKeyhole,
   MapPin,
-  MonitorPlay,
   ShieldCheck,
   UserRound,
+  Users,
   Vibrate,
 } from 'lucide-react';
 import { AccountPasswordForm } from '@/components/account-password-form';
-import { OverlayLinkCard } from '@/components/overlay-link-card';
+import { AccountProfileForm } from '@/components/account-profile-form';
 import { WeatherCityForm } from '@/components/weather-city-form';
 import { LEGAL_TERMS_VERSION, memberOwnerWhere, requireAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { ensureOverlayToken } from '@/lib/overlay';
 import { logoutAllAdminSessions } from '@/server-actions/auth';
 
 export const dynamic = 'force-dynamic';
@@ -35,7 +31,13 @@ function formatDateOnly(date: Date | null | undefined) {
   return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium' }).format(date);
 }
 
-function getSubscriptionLabel(plan: string | null | undefined) {
+function formatDateInput(date: Date | null | undefined) {
+  if (!date) return '';
+  return date.toISOString().slice(0, 10);
+}
+
+function getSubscriptionLabel(plan: string | null | undefined, role: string) {
+  if (role === 'OWNER') return 'Propriétaire';
   switch (plan) {
     case 'starter':
       return 'Starter';
@@ -59,111 +61,72 @@ function addOneMonth(date: Date | null | undefined) {
 
 export default async function AccountPage() {
   const admin = await requireAdmin();
-  const overlayToken = await ensureOverlayToken(admin.id);
 
-  const [user, totalMembers, connectedMembers, pairedMembers, activeSessions, openSessions] = await Promise.all([
+  const [user, totalMembers, connectedMembers, activeAdminSessions, openControlSessions] = await Promise.all([
     db.adminUser.findUnique({ where: { id: admin.id } }),
     db.member.count({ where: memberOwnerWhere(admin) }),
     db.member.count({ where: { ...memberOwnerWhere(admin), connected: true } }),
-    db.member.count({ where: { ...memberOwnerWhere(admin), lovenseUserId: { not: null } } }),
     db.adminSession.count({ where: { userId: admin.id, expiresAt: { gt: new Date() } } }),
     db.session.count({ where: admin.role === 'OWNER' ? { active: true } : { active: true, member: { ownerId: admin.id } } }),
   ]);
 
-  const legalAccepted = admin.role !== 'MODEL' || admin.legalAcceptedVersion === LEGAL_TERMS_VERSION;
-  const displayedSubscriptionPlan = admin.subscriptionPlan ?? (admin.legalAcceptedAt ? 'trial' : null);
-  const displayedSubscriptionStart = admin.subscriptionStartedAt ?? admin.legalAcceptedAt;
-  const displayedSubscriptionEnd = admin.subscriptionEndsAt ?? addOneMonth(admin.legalAcceptedAt);
+  if (!user) {
+    throw new Error('Compte introuvable.');
+  }
+
+  const displayedSubscriptionPlan = user.subscriptionPlan ?? (user.legalAcceptedAt ? 'trial' : null);
+  const displayedSubscriptionStart = user.subscriptionStartedAt ?? user.legalAcceptedAt;
+  const displayedSubscriptionEnd = user.subscriptionEndsAt ?? addOneMonth(user.legalAcceptedAt);
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-accent-400">Espace personnel</p>
-        <h1 className="mt-2 text-2xl font-bold text-neutral-50">Compte</h1>
-        <p className="mt-1 text-sm text-neutral-400">Gérez votre profil, votre sécurité et vos documents PULSEROOM.</p>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-accent-400">Espace personnel</p>
+          <h1 className="mt-2 text-2xl font-bold text-neutral-50">Compte</h1>
+          <p className="mt-1 text-sm text-neutral-400">Profil, sécurité, météo, accès et abonnement.</p>
+        </div>
+        <Link href="/dashboard/technical" className="btn-secondary w-full justify-center sm:w-auto">
+          Espace technique
+        </Link>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <SummaryCard icon={UserRound} label="Statut du compte" value={admin.active ? 'Actif' : 'Suspendu'} />
-        <SummaryCard icon={ShieldCheck} label="Sessions admin ouvertes" value={String(activeSessions)} />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <SummaryCard icon={ShieldCheck} label="Statut du compte" value={user.active ? 'Actif' : 'Suspendu'} />
+        <SummaryCard icon={LockKeyhole} label="Sessions admin ouvertes" value={String(activeAdminSessions)} />
         <SummaryCard icon={Vibrate} label="Membres Lovense connectés" value={`${connectedMembers}/${totalMembers}`} />
+        <SummaryCard icon={BadgeEuro} label="Revenu crédits ce mois" value="0,00 €" />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <section className="card p-5">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-500/15 text-accent-400">
-              <UserRound size={20} />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-neutral-200">Profil</h2>
-              <p className="text-xs text-neutral-500">Informations principales du compte.</p>
-            </div>
-          </div>
+      <section className="card p-5">
+        <SectionHeader
+          icon={UserRound}
+          title="Informations du compte"
+          description="Informations visibles et administratives du modèle ou de l’admin."
+        />
+        <AccountProfileForm
+          defaultValues={{
+            name: user.name,
+            firstName: user.firstName,
+            gender: user.gender,
+            birthDate: formatDateInput(user.birthDate),
+          }}
+        />
 
-          <div className="grid gap-4 text-sm sm:grid-cols-2">
-            <InfoItem label="Nom" value={admin.name} />
-            <InfoItem label="Email" value={admin.email} />
-            <InfoItem label="Rôle" value={admin.role === 'OWNER' ? 'Propriétaire' : 'Modèle'} />
-            <InfoItem label="Compte créé le" value={formatDate(user?.createdAt)} />
-            <InfoItem label="Dernière mise à jour" value={formatDate(user?.updatedAt)} />
-            <InfoItem label="Ville météo" value={admin.weatherCity ?? 'Non configurée'} />
-            <InfoItem label="Version légale actuelle" value={LEGAL_TERMS_VERSION} />
-          </div>
-        </section>
+        <div className="mt-5 grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-3">
+          <InfoItem label="Email" value={user.email} />
+          <InfoItem label="Rôle" value={user.role === 'OWNER' ? 'Propriétaire' : 'Modèle'} />
+          <InfoItem label="Sexe" value={user.gender ?? 'Non renseigné'} />
+          <InfoItem label="Date de naissance" value={formatDateOnly(user.birthDate)} />
+          <InfoItem label="Compte créé le" value={formatDate(user.createdAt)} />
+          <InfoItem label="Dernière mise à jour" value={formatDate(user.updatedAt)} />
+          <InfoItem label="Ville météo" value={user.weatherCity ?? 'Non configurée'} />
+          <InfoItem label="Version légale actuelle" value={LEGAL_TERMS_VERSION} />
+          <InfoItem label="Version acceptée" value={user.legalAcceptedVersion ?? 'Non disponible'} />
+        </div>
+      </section>
 
-        <section className="card p-5">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-300">
-              <FileText size={20} />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-neutral-200">Documents légaux</h2>
-              <p className="text-xs text-neutral-500">Suivi de l’acceptation et accès aux ressources.</p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-base-800 bg-base-950/70 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-neutral-400">CGU / RGPD</span>
-                <span
-                  className={
-                    legalAccepted
-                      ? 'rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-300'
-                      : 'rounded-full bg-red-500/15 px-3 py-1 text-xs font-semibold text-red-300'
-                  }
-                >
-                  {legalAccepted ? 'Acceptées' : 'À accepter'}
-                </span>
-              </div>
-              <p className="mt-3 text-sm text-neutral-300">
-                {admin.role === 'MODEL'
-                  ? `Acceptées le : ${formatDate(admin.legalAcceptedAt)}`
-                  : 'Le propriétaire n’est pas soumis au parcours obligatoire modèle.'}
-              </p>
-              <p className="mt-1 text-xs text-neutral-500">Version acceptée : {admin.legalAcceptedVersion ?? 'Non disponible'}</p>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-              <Link href="/legal" className="btn-secondary justify-center">
-                <BookOpen size={17} />
-                Relire les conditions
-              </Link>
-              <a href="/guide-modeles-pulseroom.pdf" className="btn-secondary justify-center" target="_blank" rel="noreferrer">
-                <FileText size={17} />
-                Guide modèle PDF
-              </a>
-              <a href="/manuel-complet-pulseroom.pdf" className="btn-secondary justify-center" target="_blank" rel="noreferrer">
-                <FileText size={17} />
-                Manuel complet PDF
-              </a>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
         <section>
           <div className="mb-3 flex items-center gap-2">
             <KeyRound size={17} className="text-accent-400" />
@@ -173,18 +136,16 @@ export default async function AccountPage() {
         </section>
 
         <section className="card p-5">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-500/15 text-accent-400">
-              <LockKeyhole size={20} />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-neutral-200">Accès et sessions</h2>
-              <p className="text-xs text-neutral-500">Gardez le contrôle sur votre compte admin.</p>
-            </div>
+          <SectionHeader
+            icon={LockKeyhole}
+            title="Accès et sessions"
+            description="Gestion des connexions ouvertes sur votre compte."
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <InfoItem label="Sessions admin ouvertes" value={String(activeAdminSessions)} />
+            <InfoItem label="Sessions de contrôle actives" value={String(openControlSessions)} />
           </div>
-
-          <div className="space-y-4 text-sm text-neutral-400">
-            <p>Ne partagez jamais votre mot de passe administrateur avec un membre ou un tiers.</p>
+          <div className="mt-4 space-y-4 text-sm text-neutral-400">
             <p>Si vous pensez que votre accès a été partagé, changez votre mot de passe puis fermez toutes les sessions.</p>
             <form action={logoutAllAdminSessions}>
               <button type="submit" className="btn-secondary w-full justify-center">
@@ -196,37 +157,22 @@ export default async function AccountPage() {
       </div>
 
       <section className="card p-5">
-        <div className="mb-5 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-300">
-            <MapPin size={20} />
-          </div>
-          <div>
-            <h2 className="text-sm font-semibold text-neutral-200">Météo du tableau de bord</h2>
-            <p className="text-xs text-neutral-500">Ville utilisée pour afficher la température et le message d’accueil.</p>
-          </div>
-        </div>
-
-        <WeatherCityForm defaultValue={admin.weatherCity} />
+        <SectionHeader
+          icon={MapPin}
+          title="Tableau de bord météo"
+          description="Ville utilisée pour afficher la température sur le tableau de bord et les pages membres."
+        />
+        <WeatherCityForm defaultValue={user.weatherCity} />
       </section>
 
-      {admin.role === 'MODEL' ? (
-        <section className="card p-5">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-500/15 text-accent-400">
-              <Crown size={20} />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-neutral-200">Abonnement</h2>
-              <p className="text-xs text-neutral-500">Offre actuellement associée à votre espace modèle.</p>
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            <InfoItem label="Offre en cours" value={getSubscriptionLabel(displayedSubscriptionPlan)} />
-            <InfoItem label="Date de début" value={formatDateOnly(displayedSubscriptionStart)} />
-            <InfoItem label="Date de fin" value={formatDateOnly(displayedSubscriptionEnd)} />
-          </div>
-
+      <section className="card p-5">
+        <SectionHeader icon={Crown} title="Abonnement" description="Offre actuellement associée à votre espace." />
+        <div className="grid gap-4 sm:grid-cols-3">
+          <InfoItem label="Offre en cours" value={getSubscriptionLabel(displayedSubscriptionPlan, user.role)} />
+          <InfoItem label="Date de début" value={formatDateOnly(displayedSubscriptionStart)} />
+          <InfoItem label="Date de fin" value={formatDateOnly(displayedSubscriptionEnd)} />
+        </div>
+        {user.role === 'MODEL' ? (
           <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-base-800 bg-base-950/70 p-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm leading-6 text-neutral-400">
               Chaque période affichée couvre un mois. Vous pouvez consulter les offres si vous souhaitez changer de plan.
@@ -235,70 +181,48 @@ export default async function AccountPage() {
               Changer de plan
             </Link>
           </div>
-        </section>
-      ) : null}
+        ) : null}
+      </section>
 
       <div className="grid gap-6 xl:grid-cols-2">
         <section className="card p-5">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-300">
-              <MonitorPlay size={20} />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-neutral-200">Overlay OBS</h2>
-              <p className="text-xs text-neutral-500">Annonce automatiquement les prises de contrôle pendant le live.</p>
-            </div>
-          </div>
-
-          <OverlayLinkCard token={overlayToken} />
-          <p className="mt-4 text-sm leading-6 text-neutral-400">
-            Dans OBS, ajoutez une source navigateur, collez cette URL, puis utilisez un fond transparent.
-          </p>
-        </section>
-
-        <section className="card p-5">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-300">
-              <Vibrate size={20} />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-neutral-200">Résumé Lovense</h2>
-              <p className="text-xs text-neutral-500">Vue rapide de vos connexions appareils.</p>
-            </div>
-          </div>
-
+          <SectionHeader icon={Users} title="Membres et Lovense" description="Vue rapide des membres rattachés au compte." />
           <div className="grid gap-3 sm:grid-cols-3">
             <Metric label="Membres" value={String(totalMembers)} />
-            <Metric label="Appairés" value={String(pairedMembers)} />
             <Metric label="Connectés" value={String(connectedMembers)} />
+            <Metric label="Sessions actives" value={String(openControlSessions)} />
           </div>
-          <p className="mt-4 text-sm leading-6 text-neutral-400">
-            Les jouets se connectent depuis la fiche d’un membre. Chaque lien membre contrôle uniquement l’appareil associé à ce
-            membre.
-          </p>
-          <p className="mt-2 text-xs text-neutral-500">Sessions de contrôle actives : {openSessions}</p>
         </section>
 
         <section className="card p-5">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-500/15 text-accent-400">
-              <LifeBuoy size={20} />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-neutral-200">Support</h2>
-              <p className="text-xs text-neutral-500">
-                Les informations sont à fournir en cas de problème à l’adresse email : monsieurguits@gmail.com
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-3 text-sm text-neutral-400">
-            <SupportItem icon={CircleHelp} text="Nom ou pseudo du membre concerné." />
-            <SupportItem icon={CalendarDays} text="Date, heure et action testée." />
-            <SupportItem icon={BadgeCheck} text="Message d’erreur exact ou capture d’écran." />
-            <SupportItem icon={Vibrate} text="Statut Lovense affiché : connecté ou déconnecté." />
+          <SectionHeader icon={LifeBuoy} title="Support" description="Contact support officiel PULSEROOM." />
+          <div className="rounded-2xl border border-base-800 bg-base-950/70 p-4 text-sm leading-6 text-neutral-300">
+            Pour toute demande, contactez <span className="font-semibold text-neutral-50">contact@pulse-room.app</span> avec votre
+            pseudo, l’heure du problème et une capture du message affiché.
           </div>
         </section>
+      </div>
+    </div>
+  );
+}
+
+function SectionHeader({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: typeof UserRound;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="mb-5 flex items-center gap-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-500/15 text-accent-400">
+        <Icon size={20} />
+      </div>
+      <div>
+        <h2 className="text-sm font-semibold text-neutral-200">{title}</h2>
+        <p className="text-xs text-neutral-500">{description}</p>
       </div>
     </div>
   );
@@ -310,9 +234,9 @@ function SummaryCard({ icon: Icon, label, value }: { icon: typeof UserRound; lab
       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-500/15 text-accent-400">
         <Icon size={21} />
       </div>
-      <div>
+      <div className="min-w-0">
         <p className="text-xs text-neutral-500">{label}</p>
-        <p className="mt-1 text-lg font-bold text-neutral-50">{value}</p>
+        <p className="mt-1 truncate text-lg font-bold text-neutral-50">{value}</p>
       </div>
     </div>
   );
@@ -332,15 +256,6 @@ function Metric({ label, value }: { label: string; value: string }) {
     <div className="rounded-2xl border border-base-800 bg-base-950/70 p-4 text-center">
       <p className="text-2xl font-bold text-neutral-50">{value}</p>
       <p className="mt-1 text-xs text-neutral-500">{label}</p>
-    </div>
-  );
-}
-
-function SupportItem({ icon: Icon, text }: { icon: typeof CircleHelp; text: string }) {
-  return (
-    <div className="flex items-start gap-3 rounded-2xl border border-base-800 bg-base-950/70 p-3">
-      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-accent-400" />
-      <span>{text}</span>
     </div>
   );
 }

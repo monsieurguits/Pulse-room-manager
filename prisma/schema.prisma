@@ -74,6 +74,9 @@ model AdminUser {
   id           String   @id @default(cuid())
   email        String   @unique
   name         String
+  firstName    String?
+  gender       String?
+  birthDate    DateTime?
   role         String   @default("MODEL")
   passwordHash String
   active       Boolean  @default(true)

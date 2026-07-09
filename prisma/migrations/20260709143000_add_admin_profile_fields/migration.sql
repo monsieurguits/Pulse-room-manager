@@ -1,0 +1,3 @@
+ALTER TABLE "AdminUser" ADD COLUMN "firstName" TEXT;
+ALTER TABLE "AdminUser" ADD COLUMN "gender" TEXT;
+ALTER TABLE "AdminUser" ADD COLUMN "birthDate" DATETIME;

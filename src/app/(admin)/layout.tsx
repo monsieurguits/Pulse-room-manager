@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { LayoutDashboard, LogOut, Settings, User, UserCog, Users } from 'lucide-react';
+import { LayoutDashboard, LogOut, Settings, SlidersHorizontal, User, UserCog, Users } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { hasAcceptedCurrentLegalTerms, requireAdmin } from '@/lib/auth';
 import { logoutAdmin } from '@/server-actions/auth';
@@ -9,6 +9,7 @@ const NAV = [
   { href: '/members', label: 'Membres', icon: Users },
   { href: '/models', label: 'Modèles', icon: UserCog, ownerOnly: true },
   { href: '/dashboard/account', label: 'Compte', icon: User },
+  { href: '/dashboard/technical', label: 'Technique', icon: SlidersHorizontal },
   { href: '/dashboard/settings', label: 'Paramètres', icon: Settings, ownerOnly: true },
 ];
 
