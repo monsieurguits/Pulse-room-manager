@@ -36,6 +36,8 @@ const CUSTOM_PATTERNS = [
   { label: 'Impulsions', rule: 'V:1;F:v;S:360#', strength: '20;6;18;5;15;4;0', stepMs: 360 },
 ] as const;
 
+const INTENSITY_SEND_DELAY_MS = 35;
+
 interface PatternPreview {
   label: string;
   strengths: number[];
@@ -109,6 +111,7 @@ export function ControlPanel({
   const intensitySendTimer = useRef<number | null>(null);
   const intensitySendInFlight = useRef(false);
   const queuedIntensity = useRef<number | null>(null);
+  const lastSentIntensity = useRef<number | null>(null);
   const hasControl = realtime.isControlling && realtime.canControl;
   const effectivePaused = hasControl && paused;
   const previewStrengths = activePattern?.strengths.length ? activePattern.strengths : [intensity];
@@ -197,7 +200,7 @@ export function ControlPanel({
     startTransition(async () => {
       try {
         await post('/api/control/start');
-        await post('/api/lovense/vibrate', { level: intensity, timeSec: 0 });
+        await sendIntensityCommand(intensity);
         await realtime.refresh();
         setPaused(false);
       } catch (error) {
@@ -212,13 +215,20 @@ export function ControlPanel({
   };
 
   const handleIntensityChange = (level: number) => {
+    const nextLevel = Math.min(20, Math.max(0, Math.round(level)));
+
     setActivePattern(null);
-    setIntensity(level);
+    setIntensity(nextLevel);
 
     if (hasControl && !effectivePaused) {
-      queueIntensityCommand(level);
+      queueIntensityCommand(nextLevel, true);
     }
   };
+
+  async function sendIntensityCommand(level: number) {
+    await post('/api/lovense/vibrate', { level, timeSec: 0 });
+    lastSentIntensity.current = level;
+  }
 
   async function flushIntensityCommand() {
     if (intensitySendInFlight.current) return;
@@ -227,10 +237,13 @@ export function ControlPanel({
     if (level === null) return;
 
     queuedIntensity.current = null;
+
+    if (level === lastSentIntensity.current && queuedIntensity.current === null) return;
+
     intensitySendInFlight.current = true;
 
     try {
-      await post('/api/lovense/vibrate', { level, timeSec: 0 });
+      await sendIntensityCommand(level);
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
@@ -240,7 +253,7 @@ export function ControlPanel({
         intensitySendTimer.current = window.setTimeout(() => {
           intensitySendTimer.current = null;
           void flushIntensityCommand();
-        }, 90);
+        }, INTENSITY_SEND_DELAY_MS);
       }
     }
   }
@@ -262,7 +275,7 @@ export function ControlPanel({
     intensitySendTimer.current = window.setTimeout(() => {
       intensitySendTimer.current = null;
       void flushIntensityCommand();
-    }, 90);
+    }, INTENSITY_SEND_DELAY_MS);
   }
 
   function commitIntensity() {
@@ -466,6 +479,7 @@ export function ControlPanel({
                 max="20"
                 step="1"
                 value={intensity}
+                onInput={(event) => handleIntensityChange(Number(event.currentTarget.value))}
                 onChange={(event) => handleIntensityChange(Number(event.target.value))}
                 onPointerUp={commitIntensity}
                 onTouchEnd={commitIntensity}
