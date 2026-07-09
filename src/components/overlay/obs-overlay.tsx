@@ -29,6 +29,7 @@ export function ObsOverlay({ token }: { token: string }) {
   const sinceRef = useRef(new Date().toISOString());
   const seenRef = useRef(new Set<string>());
   const hideTimerRef = useRef<number | null>(null);
+  const activeEventRef = useRef<OverlayEvent | null>(null);
 
   const statusText = useMemo(() => {
     if (!token) return 'Token overlay manquant';
@@ -65,8 +66,8 @@ export function ObsOverlay({ token }: { token: string }) {
           showEvent(event);
         }
 
-        if (!activeEvent && payload.live?.active && payload.live.username) {
-          setActiveEvent({
+        if (!activeEventRef.current && payload.live?.active && payload.live.username) {
+          setDisplayedEvent({
             id: `live-${payload.live.updatedAt ?? payload.live.username}`,
             type: 'control-started',
             message: `${payload.live.username} a pris le contrôle du jouet ${payload.live.toyName ?? 'Lovense'} depuis son espace FanClub.`,
@@ -80,17 +81,22 @@ export function ObsOverlay({ token }: { token: string }) {
       }
     }
 
+    function setDisplayedEvent(event: OverlayEvent | null) {
+      activeEventRef.current = event;
+      setActiveEvent(event);
+    }
+
     function showEvent(event: OverlayEvent) {
       if (hideTimerRef.current) {
         window.clearTimeout(hideTimerRef.current);
         hideTimerRef.current = null;
       }
 
-      setActiveEvent(event);
+      setDisplayedEvent(event);
 
       if (event.type === 'control-stopped') {
         hideTimerRef.current = window.setTimeout(() => {
-          setActiveEvent(null);
+          setDisplayedEvent(null);
           hideTimerRef.current = null;
         }, 10_000);
       }
@@ -106,7 +112,7 @@ export function ObsOverlay({ token }: { token: string }) {
       window.clearInterval(interval);
       if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
     };
-  }, [activeEvent, token]);
+  }, [token]);
 
   const isStarted = activeEvent?.type === 'control-started';
 

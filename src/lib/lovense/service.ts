@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import type { TipCommand } from '@prisma/client';
+import type { Member, TipCommand } from '@prisma/client';
 import { db } from '@/lib/db';
 import { requestQrCode, sendCommand } from '@/lib/lovense/client';
 import { createUniqueMemberAccessCode } from '@/lib/member-code';
@@ -215,8 +215,20 @@ export async function getBattery(memberId: string): Promise<number | null> {
   return member.battery ?? null;
 }
 
-async function requireLovenseTarget(memberId: string, toyId?: string) {
+interface LovenseTarget {
+  sourceMemberId: string;
+  ownerId: string | null;
+  uid: string;
+  domain: string;
+  httpsPort: number;
+  toy?: string;
+}
+
+async function requireLovenseTarget(memberId: string, toyId?: string): Promise<LovenseTarget> {
   const member = await db.member.findUniqueOrThrow({ where: { id: memberId } });
+  const preferredTarget = await findPreferredLovenseTarget(member, toyId);
+  if (preferredTarget) return preferredTarget;
+
   if (!member.lovenseUserId) {
     throw new Error("Ce membre n'est pas encore appairé à un jouet Lovense.");
   }
@@ -240,7 +252,41 @@ async function requireLovenseTarget(memberId: string, toyId?: string) {
   };
 }
 
-type LovenseTarget = Awaited<ReturnType<typeof requireLovenseTarget>>;
+async function findPreferredLovenseTarget(
+  member: Member,
+  toyId?: string
+): Promise<LovenseTarget | null> {
+  const candidates = await db.member.findMany({
+    where: {
+      ownerId: member.ownerId,
+      connected: true,
+      lovenseUserId: { not: null },
+      deviceDomain: { not: null },
+      httpsPort: { not: null },
+    },
+    orderBy: { updatedAt: 'desc' },
+    take: 10,
+  });
+
+  const candidate = candidates.find((candidateMember) => {
+    if (!toyId) return true;
+    const toys = parseStoredToys(candidateMember.toysJson);
+    return toys.length === 0 || toys.some((toy) => toy.id === toyId);
+  });
+
+  if (!candidate?.lovenseUserId || !candidate.deviceDomain || !candidate.httpsPort) {
+    return null;
+  }
+
+  return {
+    sourceMemberId: candidate.id,
+    ownerId: candidate.ownerId,
+    uid: candidate.lovenseUserId,
+    domain: candidate.deviceDomain,
+    httpsPort: candidate.httpsPort,
+    toy: toyId,
+  };
+}
 
 async function runCommand(
   memberId: string,
