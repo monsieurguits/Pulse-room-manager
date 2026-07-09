@@ -108,16 +108,9 @@ export async function handleCallback(payload: LovenseCallbackPayload): Promise<v
     username: member.username,
   });
 
-  const toys = payload.toys ? Object.values(payload.toys) : [];
-  const primaryToy = toys[0];
-  const normalizedToys = toys.map((toy) => ({
-    id: toy.id,
-    name: toy.name,
-    nickName: toy.nickName,
-    status: Number(toy.status) === 1 ? 1 : 0,
-    version: toy.version,
-    battery: toy.battery,
-  })) satisfies LovenseToy[];
+  const hasToySnapshot = payload.toys !== undefined;
+  const normalizedToys = normalizeLovenseToys(payload.toys ? Object.values(payload.toys) : []);
+  const primaryToy = normalizedToys.find((toy) => toy.status === 1) ?? normalizedToys[0];
 
   console.log("🎮 Jouet détecté :", primaryToy);
 
@@ -135,13 +128,13 @@ export async function handleCallback(payload: LovenseCallbackPayload): Promise<v
       httpsPort: toOptionalNumber(payload.httpsPort) ?? member.httpsPort,
       wsPort: toOptionalNumber(payload.wsPort ?? payload.wssPort) ?? member.wsPort,
 
-      connected: normalizedToys.some((toy) => toy.status === 1),
+      connected: hasToySnapshot ? normalizedToys.some((toy) => toy.status === 1) : member.connected,
 
       toyId: primaryToy?.id ?? member.toyId,
       toyName: primaryToy?.nickName || primaryToy?.name || member.toyName,
       toyType: primaryToy?.name ?? member.toyType,
       battery: primaryToy?.battery ?? member.battery,
-      toysJson: normalizedToys.length > 0 ? JSON.stringify(normalizedToys) : member.toysJson,
+      toysJson: hasToySnapshot ? JSON.stringify(normalizedToys) : member.toysJson,
     },
   });
 
@@ -674,17 +667,44 @@ function parseStoredToys(value: string | null): LovenseToy[] {
   try {
     const parsed = JSON.parse(value) as LovenseToy[];
     if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter((toy) => toy && typeof toy.id === 'string')
-      .map((toy) => ({
-        id: toy.id,
-        name: toy.name || toy.nickName || 'Jouet',
-        nickName: toy.nickName,
-        status: Number(toy.status) === 1 ? 1 : 0,
-        version: toy.version,
-        battery: toy.battery,
-      }));
+    return normalizeLovenseToys(parsed);
   } catch {
     return [];
   }
+}
+
+function normalizeLovenseToys(
+  toys: Array<Omit<Partial<LovenseToy>, 'status'> & { status?: LovenseToy['status'] | string }>
+): LovenseToy[] {
+  const byId = new Map<string, LovenseToy>();
+
+  for (const toy of toys) {
+    if (!toy || typeof toy.id !== 'string' || toy.id.trim().length === 0) continue;
+
+    const id = toy.id.trim();
+    const normalized: LovenseToy = {
+      id,
+      name: toy.name || toy.nickName || 'Jouet',
+      nickName: toy.nickName,
+      status: Number(toy.status) === 1 ? 1 : 0,
+      version: toy.version,
+      battery: toy.battery,
+    };
+    const existing = byId.get(id);
+
+    if (!existing || normalized.status > existing.status) {
+      byId.set(id, { ...existing, ...normalized });
+      continue;
+    }
+
+    byId.set(id, {
+      ...normalized,
+      ...existing,
+      battery: existing.battery ?? normalized.battery,
+      nickName: existing.nickName ?? normalized.nickName,
+      version: existing.version ?? normalized.version,
+    });
+  }
+
+  return [...byId.values()].sort((left, right) => right.status - left.status);
 }
