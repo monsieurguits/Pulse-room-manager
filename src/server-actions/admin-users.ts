@@ -70,21 +70,23 @@ export async function createModelAdmin(_prev: ModelFormState, formData: FormData
 }
 
 export async function setModelActive(modelId: string, active: boolean): Promise<void> {
-  await requireOwner();
+  const owner = await requireOwner();
+  if (modelId === owner.id) return;
   await db.adminUser.update({
-    where: { id: modelId, role: 'MODEL' },
+    where: { id: modelId },
     data: { active },
   });
   revalidatePath('/models');
 }
 
 export async function resetModelPassword(modelId: string, formData: FormData): Promise<void> {
-  await requireOwner();
+  const owner = await requireOwner();
+  if (modelId === owner.id) return;
   const password = String(formData.get('password') ?? '');
   if (password.length < 8) return;
 
   await db.adminUser.update({
-    where: { id: modelId, role: 'MODEL' },
+    where: { id: modelId },
     data: { passwordHash: hashPassword(password) },
   });
   await db.adminSession.deleteMany({ where: { userId: modelId } });
@@ -99,7 +101,7 @@ export async function deleteModelAdmin(modelId: string): Promise<void> {
     select: { id: true, role: true },
   });
 
-  if (!model || model.role !== 'MODEL') return;
+  if (!model || model.id === owner.id || !['MODEL', 'OWNER'].includes(model.role)) return;
 
   await db.$transaction([
     db.member.updateMany({

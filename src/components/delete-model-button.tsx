@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { deleteModelAdmin } from '@/server-actions/admin-users';
 
-export function DeleteModelButton({ modelId, modelName }: { modelId: string; modelName: string }) {
+export function DeleteModelButton({ modelId, modelName, role = 'MODEL' }: { modelId: string; modelName: string; role?: string }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -32,7 +32,7 @@ export function DeleteModelButton({ modelId, modelName }: { modelId: string; mod
                 <h2 className="text-base font-semibold text-neutral-50">Supprimer le modèle</h2>
                 <p className="mt-2 text-sm leading-6 text-neutral-400">
                   Voulez-vous supprimer définitivement {modelName} ? Ses membres seront réattribués à votre compte
-                  propriétaire.
+                  propriétaire{role === 'OWNER' ? ' et ses accès admin seront supprimés' : ''}.
                 </p>
               </div>
             </div>

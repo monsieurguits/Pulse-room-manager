@@ -23,8 +23,8 @@ export function PromoteModelButton({ modelId, modelName }: { modelId: string; mo
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-          <section className="w-full max-w-md rounded-3xl border border-white/15 bg-base-900 p-6 text-neutral-100 shadow-2xl shadow-black/50">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-6 backdrop-blur-sm sm:items-center">
+          <section className="max-h-[calc(100svh-3rem)] w-full max-w-md overflow-y-auto rounded-3xl border border-white/15 bg-base-900 p-5 text-neutral-100 shadow-2xl shadow-black/50 sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-400/15 text-cyan-200">
                 <ShieldCheck size={24} />

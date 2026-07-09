@@ -33,11 +33,22 @@ function ActivationBadge({ model }: { model: { legalAcceptedVersion: string | nu
   );
 }
 
+function RoleBadge({ role }: { role: string }) {
+  return role === 'OWNER' ? (
+    <span className="badge w-fit bg-cyan-400/15 text-cyan-200">Admin</span>
+  ) : (
+    <span className="badge w-fit bg-base-800 text-neutral-300">Modèle</span>
+  );
+}
+
 export default async function ModelsPage() {
-  await requireOwner();
+  const owner = await requireOwner();
 
   const models = await db.adminUser.findMany({
-    where: { role: 'MODEL' },
+    where: {
+      id: { not: owner.id },
+      role: { in: ['MODEL', 'OWNER'] },
+    },
     orderBy: { createdAt: 'desc' },
     include: { _count: { select: { members: true } } },
   });
@@ -71,6 +82,9 @@ export default async function ModelsPage() {
               Membres : <strong className="text-neutral-100">{model._count.members}</strong>
             </p>
             <div className="mt-3 rounded-xl border border-base-800 bg-base-950/70 px-3 py-2">
+              <RoleBadge role={model.role} />
+            </div>
+            <div className="mt-3 rounded-xl border border-base-800 bg-base-950/70 px-3 py-2">
               <ActivationBadge model={model} />
             </div>
             <div className="mt-4 grid gap-3">
@@ -91,8 +105,8 @@ export default async function ModelsPage() {
                   Réinitialiser
                 </button>
               </form>
-              <PromoteModelButton modelId={model.id} modelName={model.name} />
-              <DeleteModelButton modelId={model.id} modelName={model.name} />
+              {model.role === 'MODEL' ? <PromoteModelButton modelId={model.id} modelName={model.name} /> : null}
+              <DeleteModelButton modelId={model.id} modelName={model.name} role={model.role} />
             </div>
           </article>
         ))}
@@ -106,6 +120,7 @@ export default async function ModelsPage() {
             <tr className="border-b border-base-800 bg-base-850/50 text-neutral-500">
               <th className="px-4 py-3 font-medium">Modèle</th>
               <th className="px-4 py-3 font-medium">Email</th>
+              <th className="px-4 py-3 font-medium">Rôle</th>
               <th className="px-4 py-3 font-medium">Membres</th>
               <th className="px-4 py-3 font-medium">Statut</th>
               <th className="px-4 py-3 font-medium">Activation</th>
@@ -117,6 +132,9 @@ export default async function ModelsPage() {
               <tr key={model.id} className="border-b border-base-800/60 text-neutral-300">
                 <td className="px-4 py-3 font-medium text-neutral-100">{model.name}</td>
                 <td className="px-4 py-3">{model.email}</td>
+                <td className="px-4 py-3">
+                  <RoleBadge role={model.role} />
+                </td>
                 <td className="px-4 py-3">{model._count.members}</td>
                 <td className="px-4 py-3">
                   {model.active ? (
@@ -147,15 +165,15 @@ export default async function ModelsPage() {
                         Réinitialiser
                       </button>
                     </form>
-                    <PromoteModelButton modelId={model.id} modelName={model.name} />
-                    <DeleteModelButton modelId={model.id} modelName={model.name} />
+                    {model.role === 'MODEL' ? <PromoteModelButton modelId={model.id} modelName={model.name} /> : null}
+                    <DeleteModelButton modelId={model.id} modelName={model.name} role={model.role} />
                   </div>
                 </td>
               </tr>
             ))}
             {models.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-neutral-500">
+                <td colSpan={7} className="px-4 py-8 text-center text-neutral-500">
                   Aucun compte modèle pour le moment.
                 </td>
               </tr>
