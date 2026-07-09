@@ -10,6 +10,15 @@ interface PasswordChangedEmailInput {
   email: string;
 }
 
+interface ModelContactRequestEmailInput {
+  lastName: string;
+  firstName: string;
+  pseudo: string;
+  email: string;
+  platforms: string[];
+  message?: string;
+}
+
 const DEFAULT_APP_URL = 'https://pulse-room.app';
 const PUBLIC_APP_URL = 'https://pulse-room.app';
 
@@ -365,6 +374,101 @@ export async function sendPasswordChangedEmail(input: PasswordChangedEmailInput)
     const error = await response.text().catch(() => '');
     throw new Error(error || "L'email de confirmation n'a pas pu être envoyé.");
   }
+}
+
+export async function sendModelContactRequestEmail(input: ModelContactRequestEmailInput): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.EMAIL_FROM;
+  const to = 'contact@pulse-room.fr';
+
+  if (!apiKey || !from) {
+    throw new Error('Configuration email manquante : RESEND_API_KEY et EMAIL_FROM sont requis.');
+  }
+
+  const subject = `Nouvelle demande modèle PULSEROOM - ${input.pseudo}`;
+  const platforms = input.platforms.join(', ');
+  const message = input.message?.trim() || 'Aucun message renseigné.';
+
+  const text = [
+    'Nouvelle demande pour devenir membre modèle PULSEROOM',
+    '',
+    `Nom : ${input.lastName}`,
+    `Prénom : ${input.firstName}`,
+    `Pseudo : ${input.pseudo}`,
+    `Email : ${input.email}`,
+    `Plateformes : ${platforms}`,
+    '',
+    'Message :',
+    message,
+  ].join('\n');
+
+  const html = `
+    <div style="margin:0;padding:0;background:#06060b;font-family:Arial,Helvetica,sans-serif;color:#f8fafc;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;background:#06060b;">
+        <tr>
+          <td align="center" style="padding:34px 16px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;max-width:680px;border-collapse:separate;border-spacing:0;">
+              <tr>
+                <td style="border-radius:26px;overflow:hidden;border:1px solid rgba(255,255,255,.14);background:#0b0b13;">
+                  <div style="padding:30px;background:linear-gradient(135deg,rgba(255,46,109,.22),rgba(0,216,255,.14));">
+                    <img src="${PUBLIC_APP_URL}/pulseroom-logo-transparent.png" alt="PULSEROOM" style="width:132px;height:auto;display:block;margin:0 auto 18px;" />
+                    <h1 style="margin:0;text-align:center;color:#ffffff;font-size:26px;line-height:1.2;">Nouvelle demande modèle</h1>
+                    <p style="margin:10px 0 0;text-align:center;color:#cbd5e1;font-size:14px;">Une personne souhaite être contactée par l’équipe PULSEROOM.</p>
+                  </div>
+                  <div style="padding:28px 30px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      ${emailRow('Nom', input.lastName)}
+                      ${emailRow('Prénom', input.firstName)}
+                      ${emailRow('Pseudo', input.pseudo)}
+                      ${emailRow('Email', input.email)}
+                      ${emailRow('Plateformes', platforms)}
+                    </table>
+                    <div style="margin-top:18px;border-radius:18px;border:1px solid rgba(255,255,255,.1);background:#11111c;padding:18px;">
+                      <p style="margin:0 0 8px;color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:.08em;">Message</p>
+                      <p style="margin:0;color:#e5e7eb;font-size:14px;line-height:1.7;white-space:pre-wrap;">${escapeHtml(message)}</p>
+                    </div>
+                    <p style="margin:18px 0 0;color:#94a3b8;font-size:12px;line-height:1.6;">Répondre directement à cet email pour contacter la personne.</p>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from,
+      to: [to],
+      reply_to: input.email,
+      subject,
+      html,
+      text,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text().catch(() => '');
+    throw new Error(error || "La demande n'a pas pu être envoyée.");
+  }
+}
+
+function emailRow(label: string, value: string): string {
+  return `
+    <tr>
+      <td style="padding:0 0 12px;">
+        <p style="margin:0 0 5px;color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:.08em;">${escapeHtml(label)}</p>
+        <p style="margin:0;color:#ffffff;font-size:15px;font-weight:700;">${escapeHtml(value)}</p>
+      </td>
+    </tr>
+  `;
 }
 
 function escapeHtml(value: string): string {
