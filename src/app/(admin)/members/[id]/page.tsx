@@ -8,6 +8,7 @@ import { RecentSessionsTable } from '@/components/recent-sessions-table';
 import { formatDuration } from '@/lib/utils';
 import { CopySecureLinkButton } from '@/components/copy-secure-link-button';
 import { canAccessMember, requireAdmin } from '@/lib/auth';
+import { AddMemberCreditForm } from '@/components/add-member-credit-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,6 +63,8 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         <InfoCard label="Code FanClub /join" value={member.accessCode ?? 'Non généré'} />
         <InfoCard label="Expiration" value={new Date(member.endDate).toLocaleDateString('fr-FR')} />
       </div>
+
+      <AddMemberCreditForm memberId={member.id} />
 
       <div className="card p-5">
         <h2 className="mb-4 text-sm font-semibold text-neutral-200">Appareil Lovense</h2>

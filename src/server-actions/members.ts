@@ -18,6 +18,11 @@ const memberSchema = z.object({
 });
 
 export type MemberFormState = { errors?: Record<string, string[]>; success?: boolean };
+export type AddMemberCreditState = { errors?: Record<string, string[]>; success?: boolean; addedSeconds?: number };
+
+const addCreditSchema = z.object({
+  minutes: z.coerce.number().int().min(1, 'Minimum 1 minute.').max(10, 'Maximum 10 minutes.'),
+});
 
 export async function createMember(_prev: MemberFormState, formData: FormData): Promise<MemberFormState> {
   const admin = await requireAdmin();
@@ -175,6 +180,39 @@ export async function resetCredit(memberId: string): Promise<void> {
   });
   revalidatePath('/members');
   revalidatePath(`/members/${memberId}`);
+}
+
+export async function addMemberCredit(
+  memberId: string,
+  _prev: AddMemberCreditState,
+  formData: FormData,
+): Promise<AddMemberCreditState> {
+  const admin = await requireAdmin();
+  const member = await db.member.findUnique({ where: { id: memberId }, select: { ownerId: true } });
+  if (!member || !canAccessMember(admin, member)) {
+    return { errors: { _form: ['Membre introuvable.'] } };
+  }
+
+  const parsed = addCreditSchema.safeParse({
+    minutes: formData.get('minutes'),
+  });
+
+  if (!parsed.success) {
+    return { errors: parsed.error.flatten().fieldErrors };
+  }
+
+  const addedSeconds = parsed.data.minutes * 60;
+
+  await db.member.update({
+    where: { id: memberId },
+    data: { remainingCredit: { increment: addedSeconds } },
+  });
+
+  revalidatePath('/members');
+  revalidatePath(`/members/${memberId}`);
+  revalidatePath('/dashboard');
+
+  return { success: true, addedSeconds };
 }
 
 export async function getMemberHistory(memberId: string) {
