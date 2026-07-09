@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { ModelForm } from '@/components/model-form';
 import { resetModelPassword, setModelActive } from '@/server-actions/admin-users';
 import { DeleteModelButton } from '@/components/delete-model-button';
+import { PromoteModelButton } from '@/components/promote-model-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,6 +91,7 @@ export default async function ModelsPage() {
                   Réinitialiser
                 </button>
               </form>
+              <PromoteModelButton modelId={model.id} modelName={model.name} />
               <DeleteModelButton modelId={model.id} modelName={model.name} />
             </div>
           </article>
@@ -145,6 +147,7 @@ export default async function ModelsPage() {
                         Réinitialiser
                       </button>
                     </form>
+                    <PromoteModelButton modelId={model.id} modelName={model.name} />
                     <DeleteModelButton modelId={model.id} modelName={model.name} />
                   </div>
                 </td>
