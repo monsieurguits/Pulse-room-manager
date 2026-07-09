@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { getOverlayEvents } from '@/lib/overlay';
+import { getOverlayEvents, getOverlayLiveState } from '@/lib/overlay';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,10 +16,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Date after invalide.' }, { status: 400 });
   }
 
-  const events = await getOverlayEvents(token, after);
-  if (!events) {
+  const [events, live] = await Promise.all([getOverlayEvents(token, after), getOverlayLiveState(token)]);
+  if (!events || !live) {
     return NextResponse.json({ error: 'Overlay introuvable.' }, { status: 404 });
   }
 
-  return NextResponse.json({ events });
+  return NextResponse.json({ events, live });
 }

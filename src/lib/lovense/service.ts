@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import type { TipCommand } from '@prisma/client';
 import { db } from '@/lib/db';
 import { requestQrCode, sendCommand } from '@/lib/lovense/client';
+import { updateOverlayPowerState } from '@/lib/overlay';
 import { broadcast } from '@/lib/websocket/publisher';
 import type { LovenseCallbackPayload, LovenseCommandResult, LovenseToy } from '@/types';
 
@@ -303,12 +304,14 @@ async function findFallbackLovenseTarget(currentTarget: LovenseTarget, toyId?: s
 }
 
 export async function vibrate(memberId: string, level: number, timeSec = 0, toyId?: string) {
-  return runCommand(memberId, (target) => ({
+  const result = await runCommand(memberId, (target) => ({
     ...target,
     command: 'Function',
     action: `Vibrate:${clamp(level)}`,
     timeSec,
   }), toyId);
+  if (result.ok) await updateOverlayPowerState(memberId, { intensity: level, pattern: null, patternStepMs: null }).catch(() => undefined);
+  return result;
 }
 
 export interface TipCommandInput {
@@ -468,50 +471,84 @@ function windowlessDelay(ms: number): Promise<void> {
 }
 
 export async function rotate(memberId: string, level: number, timeSec = 0, toyId?: string) {
-  return runCommand(memberId, (target) => ({
+  const result = await runCommand(memberId, (target) => ({
     ...target,
     command: 'Function',
     action: `Rotate:${clamp(level)}`,
     timeSec,
   }), toyId);
+  if (result.ok) await updateOverlayPowerState(memberId, { intensity: level, pattern: null, patternStepMs: null }).catch(() => undefined);
+  return result;
 }
 
 export async function pump(memberId: string, level: number, timeSec = 0, toyId?: string) {
-  return runCommand(memberId, (target) => ({
+  const result = await runCommand(memberId, (target) => ({
     ...target,
     command: 'Function',
     action: `Pump:${clamp(level)}`,
     timeSec,
   }), toyId);
+  if (result.ok) await updateOverlayPowerState(memberId, { intensity: level, pattern: null, patternStepMs: null }).catch(() => undefined);
+  return result;
 }
 
 export async function thrust(memberId: string, level: number, timeSec = 0, toyId?: string) {
-  return runCommand(memberId, (target) => ({
+  const result = await runCommand(memberId, (target) => ({
     ...target,
     command: 'Function',
     action: `Thrusting:${clamp(level)}`,
     timeSec,
   }), toyId);
+  if (result.ok) await updateOverlayPowerState(memberId, { intensity: level, pattern: null, patternStepMs: null }).catch(() => undefined);
+  return result;
 }
 
 /** Envoie une action brute au format "Vibrate:10", "Rotate:15", etc. */
 export async function functionCommand(memberId: string, action: string, timeSec = 0, toyId?: string) {
-  return runCommand(memberId, (target) => ({ ...target, command: 'Function', action, timeSec }), toyId);
+  const result = await runCommand(memberId, (target) => ({ ...target, command: 'Function', action, timeSec }), toyId);
+  if (result.ok) {
+    await updateOverlayPowerState(memberId, {
+      intensity: action.toLowerCase() === 'stop' ? 0 : parseActionIntensity(action),
+      pattern: null,
+      patternStepMs: null,
+    }).catch(() => undefined);
+  }
+  return result;
 }
 
 /** Pattern personnalisé : séquence de positions/intensités séparées par ';'. */
 export async function pattern(memberId: string, rule: string, strength: string, timeSec = 0, toyId?: string) {
-  return runCommand(memberId, (target) => ({ ...target, command: 'Pattern', rule, strength, timeSec }), toyId);
+  const result = await runCommand(memberId, (target) => ({ ...target, command: 'Pattern', rule, strength, timeSec }), toyId);
+  if (result.ok) {
+    const strengths = parseStrengths(strength);
+    await updateOverlayPowerState(memberId, {
+      intensity: strengths[0] ?? 0,
+      pattern: strengths,
+      patternStepMs: parsePatternStepMs(rule),
+    }).catch(() => undefined);
+  }
+  return result;
 }
 
 /** Preset prédéfini côté Lovense : "pulse", "wave", "fireworks", "earthquake"... */
 export async function preset(memberId: string, name: string, timeSec = 0, toyId?: string) {
-  return runCommand(memberId, (target) => ({ ...target, command: 'Preset', name, timeSec }), toyId);
+  const result = await runCommand(memberId, (target) => ({ ...target, command: 'Preset', name, timeSec }), toyId);
+  if (result.ok) {
+    const strengths = presetStrengths(name);
+    await updateOverlayPowerState(memberId, {
+      intensity: strengths[0] ?? 0,
+      pattern: strengths,
+      patternStepMs: 420,
+    }).catch(() => undefined);
+  }
+  return result;
 }
 
 /** Stoppe le jouet du membre ciblé. */
 export async function stop(memberId: string, toyId?: string) {
-  return runCommand(memberId, (target) => ({ ...target, command: 'Function', action: 'Stop', timeSec: 0 }), toyId);
+  const result = await runCommand(memberId, (target) => ({ ...target, command: 'Function', action: 'Stop', timeSec: 0 }), toyId);
+  if (result.ok) await updateOverlayPowerState(memberId, { intensity: 0, pattern: null, patternStepMs: null }).catch(() => undefined);
+  return result;
 }
 
 /** Stoppe tous les jouets actuellement en contrôle (utilisé en cas d'urgence / crédit épuisé). */
@@ -529,6 +566,7 @@ export async function stopAll(): Promise<void> {
             action: 'Stop',
             timeSec: 0,
           });
+          await updateOverlayPowerState(member.id, { intensity: 0, pattern: null, patternStepMs: null }).catch(() => undefined);
         }
       }
     })
@@ -537,6 +575,38 @@ export async function stopAll(): Promise<void> {
 
 function clamp(level: number): number {
   return Math.max(0, Math.min(20, Math.round(level)));
+}
+
+function parseActionIntensity(action: string): number {
+  const match = action.match(/:(\d+)/);
+  return match ? clamp(Number(match[1])) : 0;
+}
+
+function parseStrengths(strength: string): number[] {
+  return strength
+    .split(';')
+    .map((value) => clamp(Number(value.trim())))
+    .filter((value) => Number.isFinite(value));
+}
+
+function parsePatternStepMs(rule: string): number {
+  const match = rule.match(/S:(\d+)/i);
+  return match ? Math.max(120, Math.min(2000, Number(match[1]))) : 420;
+}
+
+function presetStrengths(name: string): number[] {
+  switch (name) {
+    case 'pulse':
+      return [4, 20, 4, 20, 4, 20];
+    case 'wave':
+      return [2, 5, 9, 14, 18, 20, 18, 14, 9, 5];
+    case 'fireworks':
+      return [0, 4, 12, 20, 6, 16, 20, 3, 18, 0];
+    case 'earthquake':
+      return [18, 20, 15, 20, 17, 19];
+    default:
+      return [10];
+  }
 }
 
 function toOptionalNumber(value: string | number | undefined): number | undefined {

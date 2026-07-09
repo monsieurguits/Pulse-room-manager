@@ -83,6 +83,14 @@ model AdminUser {
   subscriptionEndsAt DateTime?
   weatherCity String?
   overlayToken String? @unique
+  overlayLiveActive Boolean @default(false)
+  overlayLiveMemberId String?
+  overlayLiveUsername String?
+  overlayLiveToyName String?
+  overlayLiveIntensity Int @default(0)
+  overlayLivePatternJson String?
+  overlayLivePatternStepMs Int?
+  overlayLiveUpdatedAt DateTime?
 
   members  Member[]
   sessions AdminSession[]
