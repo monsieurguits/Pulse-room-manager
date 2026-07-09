@@ -13,6 +13,33 @@ const baseSettingsSchema = z.object({
 });
 
 export type SettingsFormState = { errors?: Record<string, string[]>; success?: boolean };
+export type MaintenanceFormState = { errors?: Record<string, string[]>; success?: boolean };
+
+const maintenanceSchema = z
+  .object({
+    maintenanceActive: z.boolean(),
+    maintenanceStartAt: z.string().optional().transform((value) => value || null),
+    maintenanceEndAt: z.string().optional().transform((value) => value || null),
+    maintenanceSiteUsable: z.enum(['yes', 'no']),
+  })
+  .refine((data) => !data.maintenanceActive || Boolean(data.maintenanceStartAt), {
+    path: ['maintenanceStartAt'],
+    message: 'Date et heure de début requises.',
+  })
+  .refine((data) => !data.maintenanceActive || Boolean(data.maintenanceEndAt), {
+    path: ['maintenanceEndAt'],
+    message: 'Date et heure de fin requises.',
+  })
+  .refine(
+    (data) =>
+      !data.maintenanceStartAt ||
+      !data.maintenanceEndAt ||
+      new Date(data.maintenanceEndAt).getTime() > new Date(data.maintenanceStartAt).getTime(),
+    {
+      path: ['maintenanceEndAt'],
+      message: 'La fin doit être après le début.',
+    },
+  );
 
 export async function getSettings() {
   await requireOwner();
@@ -55,5 +82,44 @@ export async function updateSettings(_prev: SettingsFormState, formData: FormDat
   });
 
   revalidatePath('/dashboard/settings');
+  return { success: true };
+}
+
+export async function updateMaintenanceMode(
+  _prev: MaintenanceFormState,
+  formData: FormData,
+): Promise<MaintenanceFormState> {
+  await requireOwner();
+
+  const parsed = maintenanceSchema.safeParse({
+    maintenanceActive: formData.get('maintenanceActive') === 'on',
+    maintenanceStartAt: formData.get('maintenanceStartAt'),
+    maintenanceEndAt: formData.get('maintenanceEndAt'),
+    maintenanceSiteUsable: formData.get('maintenanceSiteUsable') === 'no' ? 'no' : 'yes',
+  });
+
+  if (!parsed.success) {
+    return { errors: parsed.error.flatten().fieldErrors };
+  }
+
+  const existing = await db.settings.findUnique({ where: { id: 'settings' } });
+  if (!existing) {
+    return { errors: { maintenanceActive: ['Configurez d’abord les paramètres Lovense dans Paramètres.'] } };
+  }
+
+  await db.settings.update({
+    where: { id: 'settings' },
+    data: {
+      maintenanceActive: parsed.data.maintenanceActive,
+      maintenanceStartAt: parsed.data.maintenanceStartAt ? new Date(parsed.data.maintenanceStartAt) : null,
+      maintenanceEndAt: parsed.data.maintenanceEndAt ? new Date(parsed.data.maintenanceEndAt) : null,
+      maintenanceSiteUsable: parsed.data.maintenanceSiteUsable === 'yes',
+    },
+  });
+
+  revalidatePath('/dashboard');
+  revalidatePath('/members');
+  revalidatePath('/dashboard/account');
+  revalidatePath('/dashboard/technical');
   return { success: true };
 }

@@ -229,6 +229,10 @@ model Settings {
   heartbeatSeconds Int   @default(30)
   applicationName String @default("Pulse Room Manager")
   domain          String // domaine public de déploiement (utilisé pour générer les liens)
+  maintenanceActive Boolean @default(false)
+  maintenanceStartAt DateTime?
+  maintenanceEndAt DateTime?
+  maintenanceSiteUsable Boolean @default(true)
 
   updatedAt DateTime @updatedAt
 }

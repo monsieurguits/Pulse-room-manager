@@ -3,6 +3,8 @@ import { LayoutDashboard, LogOut, Settings, SlidersHorizontal, User, UserCog, Us
 import { redirect } from 'next/navigation';
 import { hasAcceptedCurrentLegalTerms, requireAdmin } from '@/lib/auth';
 import { logoutAdmin } from '@/server-actions/auth';
+import { getMaintenanceSettings } from '@/lib/maintenance';
+import { MaintenanceNotice } from '@/components/maintenance-notice';
 
 const NAV = [
   { href: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
@@ -20,6 +22,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   const nav = NAV.filter((item) => !item.ownerOnly || admin.role === 'OWNER');
+  const maintenance = admin.role === 'MODEL' ? await getMaintenanceSettings() : null;
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
@@ -78,7 +81,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </form>
         </div>
       </aside>
-      <main className="min-w-0 flex-1 overflow-x-hidden bg-base-950 p-4 sm:p-6 md:p-8">{children}</main>
+      <main className="min-w-0 flex-1 overflow-x-hidden bg-base-950 p-4 sm:p-6 md:p-8">
+        {admin.role === 'MODEL' && maintenance?.notice ? <MaintenanceNotice notice={maintenance.notice} /> : null}
+        {children}
+      </main>
     </div>
   );
 }
