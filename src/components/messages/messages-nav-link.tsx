@@ -17,7 +17,13 @@ export function MessagesNavLink({ initialUnread, compact = false }: { initialUnr
         const response = await fetch('/api/messages/admin', { cache: 'no-store' });
         if (!response.ok) return;
         const payload = (await response.json()) as { conversations?: Conversation[] };
-        const total = (payload.conversations ?? []).reduce((sum, conversation) => sum + conversation.unreadCount, 0);
+        const internalResponse = await fetch('/api/messages/internal', { cache: 'no-store' });
+        const internalPayload = internalResponse.ok
+          ? ((await internalResponse.json()) as { unreadByContact?: { count: number }[] })
+          : { unreadByContact: [] };
+        const memberTotal = (payload.conversations ?? []).reduce((sum, conversation) => sum + conversation.unreadCount, 0);
+        const internalTotal = (internalPayload.unreadByContact ?? []).reduce((sum, contact) => sum + contact.count, 0);
+        const total = memberTotal + internalTotal;
         if (!stopped) setUnread(total);
       } catch {
         // Le menu reste utilisable même si une requête de badge échoue.

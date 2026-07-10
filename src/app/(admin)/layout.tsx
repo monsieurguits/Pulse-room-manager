@@ -29,6 +29,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const unreadMessages = await db.directMessage.count({
     where: { member: memberOwnerWhere(admin), sender: 'member', readByModelAt: null },
   });
+  const unreadInternalMessages = await db.adminDirectMessage.count({
+    where: { recipientAdminId: admin.id, readByRecipientAt: null },
+  });
+  const unreadTotal = unreadMessages + unreadInternalMessages;
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
@@ -48,7 +52,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </form>
         </div>
         <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-          <MessagesNavLink initialUnread={unreadMessages} compact />
+          <MessagesNavLink initialUnread={unreadTotal} compact />
           {nav.map((item) => (
             <Link
               key={item.href}
@@ -67,7 +71,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <span className="text-lg font-bold tracking-[0.18em] text-neutral-50">PULSEROOM</span>
         </div>
         <nav className="flex flex-col gap-1">
-          <MessagesNavLink initialUnread={unreadMessages} />
+          <MessagesNavLink initialUnread={unreadTotal} />
           {nav.map((item) => (
             <Link
               key={item.href}

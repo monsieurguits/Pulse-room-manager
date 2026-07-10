@@ -107,12 +107,32 @@ model AdminUser {
   overlayEvents ControlOverlayEvent[]
   creditPurchases MemberCreditPurchase[]
   directMessages DirectMessage[]
+  sentAdminMessages AdminDirectMessage[] @relation("AdminMessageSender")
+  receivedAdminMessages AdminDirectMessage[] @relation("AdminMessageRecipient")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([role])
   @@index([active])
+}
+
+model AdminDirectMessage {
+  id String @id @default(cuid())
+
+  senderAdminId String
+  senderAdmin AdminUser @relation("AdminMessageSender", fields: [senderAdminId], references: [id], onDelete: Cascade)
+
+  recipientAdminId String
+  recipientAdmin AdminUser @relation("AdminMessageRecipient", fields: [recipientAdminId], references: [id], onDelete: Cascade)
+
+  body String
+  readByRecipientAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([senderAdminId, recipientAdminId, createdAt])
+  @@index([recipientAdminId, readByRecipientAt])
+  @@index([recipientAdminId, createdAt])
 }
 
 model MemberCreditPurchase {
