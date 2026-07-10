@@ -20,6 +20,8 @@ export type ModelFormState = {
   temporaryPassword?: string;
 };
 
+export type ResendModelWelcomeEmailState = { success?: boolean; error?: string };
+
 export async function createModelAdmin(_prev: ModelFormState, formData: FormData): Promise<ModelFormState> {
   const owner = await requireOwner();
 
@@ -45,6 +47,7 @@ export async function createModelAdmin(_prev: ModelFormState, formData: FormData
       email,
       role: 'MODEL',
       passwordHash: hashPassword(parsed.data.password),
+      temporaryPassword: parsed.data.password,
     },
   });
 
@@ -87,10 +90,50 @@ export async function resetModelPassword(modelId: string, formData: FormData): P
 
   await db.adminUser.update({
     where: { id: modelId },
-    data: { passwordHash: hashPassword(password) },
+    data: { passwordHash: hashPassword(password), temporaryPassword: password },
   });
   await db.adminSession.deleteMany({ where: { userId: modelId } });
   revalidatePath('/models');
+}
+
+export async function resendModelWelcomeEmail(modelId: string): Promise<ResendModelWelcomeEmailState> {
+  const owner = await requireOwner();
+  if (modelId === owner.id) return { error: 'Impossible de renvoyer un email à votre propre compte depuis cette action.' };
+
+  const model = await db.adminUser.findUnique({
+    where: { id: modelId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      temporaryPassword: true,
+    },
+  });
+
+  if (!model || !['MODEL', 'OWNER'].includes(model.role)) {
+    return { error: 'Compte modèle introuvable.' };
+  }
+
+  if (!model.temporaryPassword) {
+    return {
+      error:
+        'Mot de passe temporaire indisponible pour ce compte. Il a probablement été créé avant cette option ou modifié depuis.',
+    };
+  }
+
+  try {
+    await sendModelWelcomeEmail({
+      modelName: model.name,
+      modelEmail: model.email,
+      temporaryPassword: model.temporaryPassword,
+      adminEmail: owner.email,
+    });
+  } catch (error) {
+    return { error: (error as Error).message };
+  }
+
+  return { success: true };
 }
 
 export async function deleteModelAdmin(modelId: string): Promise<void> {

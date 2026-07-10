@@ -81,6 +81,7 @@ model AdminUser {
   birthDate    DateTime?
   role         String   @default("MODEL")
   passwordHash String
+  temporaryPassword String?
   active       Boolean  @default(true)
   legalAcceptedAt DateTime?
   legalAcceptedVersion String?

@@ -132,7 +132,7 @@ export async function changeOwnPassword(_prev: PasswordFormState, formData: Form
 
   await db.adminUser.update({
     where: { id: admin.id },
-    data: { passwordHash: hashPassword(parsed.data.newPassword) },
+    data: { passwordHash: hashPassword(parsed.data.newPassword), temporaryPassword: null },
   });
 
   await db.adminSession.deleteMany({ where: { userId: admin.id } });
