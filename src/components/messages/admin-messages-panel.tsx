@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { MessageCircle, Send } from 'lucide-react';
+import { Headset, MessageCircle, Send, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Conversation = {
@@ -19,7 +19,20 @@ type DirectMessage = {
   createdAt: string;
 };
 
-export function AdminMessagesPanel({ initialConversations }: { initialConversations: Conversation[] }) {
+type QuickContact = {
+  id: string;
+  label: string;
+  detail: string;
+  kind: 'model' | 'support';
+};
+
+export function AdminMessagesPanel({
+  initialConversations,
+  quickContacts = [],
+}: {
+  initialConversations: Conversation[];
+  quickContacts?: QuickContact[];
+}) {
   const [conversations, setConversations] = useState(initialConversations);
   const [selectedId, setSelectedId] = useState(initialConversations[0]?.id ?? '');
   const [messages, setMessages] = useState<DirectMessage[]>([]);
@@ -120,7 +133,29 @@ export function AdminMessagesPanel({ initialConversations }: { initialConversati
   }
 
   return (
-    <div className="grid min-h-[calc(100svh-12rem)] overflow-hidden rounded-3xl border border-base-800 bg-base-900 shadow-2xl lg:grid-cols-[340px_1fr]">
+    <div className="overflow-hidden rounded-3xl border border-base-800 bg-base-900 shadow-2xl">
+      {quickContacts.length > 0 ? (
+        <div className="sticky top-0 z-10 border-b border-base-800 bg-base-900/95 p-3 backdrop-blur-xl">
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {quickContacts.map((contact) => (
+              <div
+                key={contact.id}
+                className="inline-flex min-w-max items-center gap-2 rounded-2xl border border-white/10 bg-base-950 px-3 py-2 text-left shadow-lg shadow-black/10"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-500/15 text-accent-200">
+                  {contact.kind === 'support' ? <Headset size={17} /> : <UserRound size={17} />}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-xs font-bold text-neutral-100">{contact.label}</span>
+                  <span className="block max-w-48 truncate text-[11px] text-neutral-500">{contact.detail}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+    <div className="grid min-h-[calc(100svh-15.5rem)] overflow-hidden lg:grid-cols-[340px_1fr]">
       <aside className="border-b border-base-800 lg:border-b-0 lg:border-r">
         <div className="border-b border-base-800 p-4">
           <div className="flex items-center gap-2 text-sm font-semibold text-neutral-100">
@@ -206,6 +241,7 @@ export function AdminMessagesPanel({ initialConversations }: { initialConversati
           </div>
         </form>
       </section>
+      </div>
     </div>
   );
 }
