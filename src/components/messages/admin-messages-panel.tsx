@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Headset, MessageCircle, Send, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -132,6 +132,12 @@ export function AdminMessagesPanel({
     }
   }
 
+  function submitOnEnter(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    event.currentTarget.form?.requestSubmit();
+  }
+
   return (
     <div className="overflow-hidden rounded-3xl border border-base-800 bg-base-900 shadow-2xl">
       {quickContacts.length > 0 ? (
@@ -228,6 +234,7 @@ export function AdminMessagesPanel({
             <textarea
               value={body}
               onChange={(event) => setBody(event.target.value)}
+              onKeyDown={submitOnEnter}
               disabled={!selectedId || sending}
               placeholder="Répondre au membre..."
               className="input-field min-h-12 flex-1 resize-none py-3"

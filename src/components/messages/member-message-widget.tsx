@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { MessageCircle, Send, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -75,6 +75,12 @@ export function MemberMessageWidget({ secureToken, modelName }: { secureToken: s
     }
   }
 
+  function submitOnEnter(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    event.currentTarget.form?.requestSubmit();
+  }
+
   return (
     <div className="fixed bottom-4 right-4 z-40 sm:bottom-6 sm:right-6">
       {open ? (
@@ -107,6 +113,7 @@ export function MemberMessageWidget({ secureToken, modelName }: { secureToken: s
               <textarea
                 value={body}
                 onChange={(event) => setBody(event.target.value)}
+                onKeyDown={submitOnEnter}
                 placeholder="Votre message..."
                 className="input-field min-h-12 flex-1 resize-none py-3"
                 rows={1}
