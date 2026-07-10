@@ -1,16 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState, useTransition } from 'react';
+import { useActionState, useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Member } from '@prisma/client';
 import { toast } from 'sonner';
-import { Ban, Copy, ExternalLink, Pencil, QrCode, RotateCcw, Trash2 } from 'lucide-react';
+import { Ban, Copy, ExternalLink, Pencil, PlusCircle, QrCode, RotateCcw, Trash2, X } from 'lucide-react';
 import { StatusBadge, deriveMemberStatus } from '@/components/status-badge';
 import { MemberTierBadge } from '@/components/member-tier-badge';
 import { buildMemberInviteMessage } from '@/lib/member-invite-message';
 import { formatDuration } from '@/lib/utils';
-import { deleteMembers, suspendMember, resetCredit } from '@/server-actions/members';
+import { addMemberCredit, deleteMembers, suspendMember, resetCredit, type AddMemberCreditState } from '@/server-actions/members';
 
 export function MembersTable({ members }: { members: Member[] }) {
   const router = useRouter();
@@ -135,7 +135,7 @@ export function MembersTable({ members }: { members: Member[] }) {
                 <InfoLine label="Code FanClub /join" value={member.accessCode ?? 'Non généré'} />
                 <InfoLine label="Expiration" value={new Date(member.endDate).toLocaleDateString('fr-FR')} />
               </div>
-              <MemberActions member={member} copyLink={copyLink} deleteOne={deleteOne} isPending={isPending} />
+              <MemberActions member={member} copyLink={copyLink} deleteOne={deleteOne} isPending={isPending} onChanged={() => router.refresh()} />
             </article>
           );
         })}
@@ -186,7 +186,7 @@ export function MembersTable({ members }: { members: Member[] }) {
                   <td className="px-4 py-3">{formatDuration(member.remainingCredit)}</td>
                   <td className="px-4 py-3">{new Date(member.endDate).toLocaleDateString('fr-FR')}</td>
                   <td className="px-4 py-3">
-                    <MemberActions member={member} copyLink={copyLink} deleteOne={deleteOne} isPending={isPending} table />
+                    <MemberActions member={member} copyLink={copyLink} deleteOne={deleteOne} isPending={isPending} onChanged={() => router.refresh()} table />
                   </td>
                 </tr>
               );
@@ -250,16 +250,18 @@ function MemberActions({
   copyLink,
   deleteOne,
   isPending,
+  onChanged,
   table = false,
 }: {
   member: Member;
   copyLink: (member: Member) => void;
   deleteOne: (member: Member) => void;
   isPending: boolean;
+  onChanged: () => void;
   table?: boolean;
 }) {
   return (
-    <div className={table ? 'flex items-center justify-end gap-1.5' : 'mt-4 grid grid-cols-4 gap-2 sm:grid-cols-7'}>
+    <div className={table ? 'flex items-center justify-end gap-1.5' : 'mt-4 grid grid-cols-4 gap-2 sm:grid-cols-8'}>
       <button
         title="Copier le message avec lien sécurisé"
         onClick={() => copyLink(member)}
@@ -284,11 +286,15 @@ function MemberActions({
       </Link>
       <button
         title="Réinitialiser le crédit"
-        onClick={() => resetCredit(member.id).then(() => toast.success('Crédit réinitialisé.'))}
+        onClick={() => resetCredit(member.id).then(() => {
+          toast.success('Crédit réinitialisé.');
+          onChanged();
+        })}
         className="rounded-lg p-2 text-neutral-400 hover:bg-base-800 hover:text-accent-400"
       >
         <RotateCcw size={16} className="mx-auto" />
       </button>
+      <AddCreditQuickButton member={member} onAdded={onChanged} />
       <Link
         href={`/members/${member.id}/edit`}
         title="Modifier"
@@ -300,7 +306,10 @@ function MemberActions({
         title={member.active ? 'Suspendre' : 'Réactiver'}
         onClick={() =>
           suspendMember(member.id, member.active).then(() =>
-            toast.success(member.active ? 'Membre suspendu.' : 'Membre réactivé.')
+            {
+              toast.success(member.active ? 'Membre suspendu.' : 'Membre réactivé.');
+              onChanged();
+            }
           )
         }
         className="rounded-lg p-2 text-neutral-400 hover:bg-base-800 hover:text-amber-400"
@@ -316,5 +325,68 @@ function MemberActions({
         <Trash2 size={16} className="mx-auto" />
       </button>
     </div>
+  );
+}
+
+function AddCreditQuickButton({ member, onAdded }: { member: Member; onAdded: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [state, action, pending] = useActionState<AddMemberCreditState, FormData>(addMemberCredit.bind(null, member.id), {});
+
+  useEffect(() => {
+    if (state.success && state.addedSeconds) {
+      toast.success(`${formatDuration(state.addedSeconds)} ajoutés à ${member.username}.`);
+      setOpen(false);
+      onAdded();
+    }
+  }, [member.username, onAdded, state.addedSeconds, state.success]);
+
+  return (
+    <>
+      <button
+        type="button"
+        title="Ajouter du crédit"
+        onClick={() => setOpen(true)}
+        className="rounded-lg p-2 text-neutral-400 hover:bg-base-800 hover:text-cyan-300"
+      >
+        <PlusCircle size={16} className="mx-auto" />
+      </button>
+
+      {open ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+          <form action={action} className="w-full max-w-sm rounded-2xl border border-white/10 bg-base-900 p-5 shadow-2xl shadow-black/40">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-neutral-50">Ajouter du crédit</h2>
+                <p className="mt-1 text-sm text-neutral-400">{member.username}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="rounded-xl border border-base-700 bg-base-850 p-2 text-neutral-300 hover:text-white"
+                aria-label="Fermer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <label className="mt-5 block">
+              <span className="mb-2 block text-sm font-medium text-neutral-200">Minutes à ajouter</span>
+              <input name="minutes" type="number" min="1" max="10" step="1" defaultValue="1" className="input-field" required />
+              {state.errors?.minutes ? <span className="mt-2 block text-xs text-red-300">{state.errors.minutes[0]}</span> : null}
+              {state.errors?._form ? <span className="mt-2 block text-xs text-red-300">{state.errors._form[0]}</span> : null}
+            </label>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <button type="button" onClick={() => setOpen(false)} className="btn-secondary justify-center" disabled={pending}>
+                Annuler
+              </button>
+              <button type="submit" className="btn-accent justify-center" disabled={pending}>
+                {pending ? 'Ajout...' : 'Ajouter'}
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
+    </>
   );
 }
