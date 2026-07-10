@@ -35,11 +35,13 @@ export async function GET(request: NextRequest) {
   const contactId = request.nextUrl.searchParams.get('contactId');
 
   if (!contactId) {
-    const unreadGroups = await db.adminDirectMessage.groupBy({
-      by: ['senderAdminId'],
-      where: { recipientAdminId: admin.id, readByRecipientAt: null },
-      _count: { _all: true },
-    });
+    const unreadGroups = await db.adminDirectMessage
+      .groupBy({
+        by: ['senderAdminId'],
+        where: { recipientAdminId: admin.id, readByRecipientAt: null },
+        _count: { _all: true },
+      })
+      .catch(() => []);
 
     return NextResponse.json({
       unreadByContact: unreadGroups.map((item) => ({ contactId: item.senderAdminId, count: item._count._all })),
@@ -51,24 +53,28 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Contact introuvable.' }, { status: 404 });
   }
 
-  await db.adminDirectMessage.updateMany({
-    where: { senderAdminId: contactId, recipientAdminId: admin.id, readByRecipientAt: null },
-    data: { readByRecipientAt: new Date() },
-  });
+  try {
+    await db.adminDirectMessage.updateMany({
+      where: { senderAdminId: contactId, recipientAdminId: admin.id, readByRecipientAt: null },
+      data: { readByRecipientAt: new Date() },
+    });
 
-  const messages = await db.adminDirectMessage.findMany({
-    where: {
-      OR: [
-        { senderAdminId: admin.id, recipientAdminId: contactId },
-        { senderAdminId: contactId, recipientAdminId: admin.id },
-      ],
-    },
-    orderBy: { createdAt: 'asc' },
-    take: 150,
-    select: messageSelect,
-  });
+    const messages = await db.adminDirectMessage.findMany({
+      where: {
+        OR: [
+          { senderAdminId: admin.id, recipientAdminId: contactId },
+          { senderAdminId: contactId, recipientAdminId: admin.id },
+        ],
+      },
+      orderBy: { createdAt: 'asc' },
+      take: 150,
+      select: messageSelect,
+    });
 
-  return NextResponse.json({ messages });
+    return NextResponse.json({ messages });
+  } catch {
+    return NextResponse.json({ messages: [] });
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -83,14 +89,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Contact introuvable.' }, { status: 404 });
   }
 
-  const message = await db.adminDirectMessage.create({
-    data: {
-      senderAdminId: admin.id,
-      recipientAdminId: contact.id,
-      body: parsed.data.body,
-    },
-    select: messageSelect,
-  });
+  const message = await db.adminDirectMessage
+    .create({
+      data: {
+        senderAdminId: admin.id,
+        recipientAdminId: contact.id,
+        body: parsed.data.body,
+      },
+      select: messageSelect,
+    })
+    .catch(() => null);
+
+  if (!message) {
+    return NextResponse.json({ error: 'La table des messages internes doit être créée sur Turso avant d’envoyer ce message.' }, { status: 503 });
+  }
 
   return NextResponse.json({ message }, { status: 201 });
 }

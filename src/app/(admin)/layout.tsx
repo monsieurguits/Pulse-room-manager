@@ -29,9 +29,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const unreadMessages = await db.directMessage.count({
     where: { member: memberOwnerWhere(admin), sender: 'member', readByModelAt: null },
   });
-  const unreadInternalMessages = await db.adminDirectMessage.count({
-    where: { recipientAdminId: admin.id, readByRecipientAt: null },
-  });
+  const unreadInternalMessages = await db.adminDirectMessage
+    .count({
+      where: { recipientAdminId: admin.id, readByRecipientAt: null },
+    })
+    .catch(() => 0);
   const unreadTotal = unreadMessages + unreadInternalMessages;
 
   return (

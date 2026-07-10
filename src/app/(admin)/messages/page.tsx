@@ -42,11 +42,13 @@ export default async function MessagesPage() {
           select: { id: true, email: true },
         })
       : null;
-  const internalUnreadGroups = await db.adminDirectMessage.groupBy({
-    by: ['senderAdminId'],
-    where: { recipientAdminId: admin.id, readByRecipientAt: null },
-    _count: { _all: true },
-  });
+  const internalUnreadGroups = await db.adminDirectMessage
+    .groupBy({
+      by: ['senderAdminId'],
+      where: { recipientAdminId: admin.id, readByRecipientAt: null },
+      _count: { _all: true },
+    })
+    .catch(() => []);
   const unreadByContact = new Map(internalUnreadGroups.map((item) => [item.senderAdminId, item._count._all]));
 
   const conversations = members.map((member) => ({
