@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState, useEffect, useMemo, useState, useTransition } from 'react';
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Member } from '@prisma/client';
 import { toast } from 'sonner';
@@ -331,9 +331,13 @@ function MemberActions({
 function AddCreditQuickButton({ member, onAdded }: { member: Member; onAdded: () => void }) {
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState<AddMemberCreditState, FormData>(addMemberCredit.bind(null, member.id), {});
+  const handledStateRef = useRef<AddMemberCreditState | null>(null);
 
   useEffect(() => {
     if (state.success && state.addedSeconds) {
+      if (handledStateRef.current === state) return;
+      handledStateRef.current = state;
+
       toast.success(`${formatDuration(state.addedSeconds)} ajoutés à ${member.username}.`);
       setOpen(false);
       onAdded();
