@@ -60,6 +60,7 @@ export default async function ControlPage({ params }: { params: Promise<{ secure
       subscriptionEndDate={member.endDate.toISOString()}
       currentMonthStartDate={currentMonthStart.toISOString()}
       currentMonthEndDate={currentMonthEnd.toISOString()}
+      modelName={member.owner?.name ?? 'le modèle'}
       memberWeather={weather ? { modelName: member.owner?.name ?? 'le modèle', temperature: weather.temperature } : null}
       initial={{
         remainingCredit: member.remainingCredit,

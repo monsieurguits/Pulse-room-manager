@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useRealtimeMember, type RealtimeMemberState } from '@/hooks/use-realtime-member';
 import { MemberTierBadge } from '@/components/member-tier-badge';
+import { MemberMessageWidget } from '@/components/messages/member-message-widget';
 import { formatDuration, formatEstimatedEnd } from '@/lib/utils';
 import { getMemberWeatherMessage } from '@/lib/weather-messages';
 import type { LovenseToy } from '@/types';
@@ -80,6 +81,7 @@ interface Props {
   subscriptionEndDate: string;
   currentMonthStartDate: string;
   currentMonthEndDate: string;
+  modelName: string;
   memberWeather?: { modelName: string; temperature: number } | null;
   initial: RealtimeMemberState & { weeklyCredit: number };
 }
@@ -96,6 +98,7 @@ export function ControlPanel({
   subscriptionEndDate,
   currentMonthStartDate,
   currentMonthEndDate,
+  modelName,
   memberWeather,
   initial,
 }: Props) {
@@ -580,6 +583,7 @@ export function ControlPanel({
           </aside>
         </section>
       </div>
+      <MemberMessageWidget secureToken={secureToken} modelName={modelName} />
     </main>
   );
 }

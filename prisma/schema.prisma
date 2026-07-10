@@ -61,6 +61,7 @@ model Member {
   tipCommands TipCommand[]
   overlayEvents ControlOverlayEvent[]
   creditPurchases MemberCreditPurchase[]
+  directMessages DirectMessage[]
 
   createdAt DateTime @updatedAt @default(now())
   updatedAt DateTime @updatedAt
@@ -105,6 +106,7 @@ model AdminUser {
   sessions AdminSession[]
   overlayEvents ControlOverlayEvent[]
   creditPurchases MemberCreditPurchase[]
+  directMessages DirectMessage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -139,6 +141,26 @@ model MemberCreditPurchase {
   @@index([memberId, createdAt])
   @@index([ownerId, createdAt])
   @@index([status, createdAt])
+}
+
+model DirectMessage {
+  id       String @id @default(cuid())
+  ownerId  String?
+  owner    AdminUser? @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  sender String // member | model
+  body   String
+
+  readByModelAt  DateTime?
+  readByMemberAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([ownerId, createdAt])
+  @@index([memberId, createdAt])
+  @@index([ownerId, readByModelAt])
+  @@index([memberId, readByMemberAt])
 }
 
 model AdminSession {
