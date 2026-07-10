@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { ControlPanel } from '@/components/control-panel';
 import { TermsAcceptancePanel } from '@/components/terms-acceptance-panel';
-import { getToys } from '@/lib/lovense/service';
+import { getEffectiveLovenseStatus, getToys } from '@/lib/lovense/service';
 import { getDashboardWeather } from '@/lib/weather';
 
 export const dynamic = 'force-dynamic';
@@ -38,8 +38,9 @@ export default async function ControlPage({ params }: { params: Promise<{ secure
     ? Math.floor((Date.now() - ownActiveSession.startedAt.getTime()) / 1000)
     : 0;
 
-  const [toys, weather] = await Promise.all([
+  const [toys, deviceStatus, weather] = await Promise.all([
     getToys(member.id).catch(() => []),
+    getEffectiveLovenseStatus(member.id).catch(() => ({ connected: member.connected, battery: member.battery, toyName: member.toyName })),
     getDashboardWeather(member.owner?.weatherCity),
   ]);
   const now = new Date();
@@ -67,8 +68,8 @@ export default async function ControlPage({ params }: { params: Promise<{ secure
         isControlling: Boolean(activeSession),
         canControl: false,
         isWaiting: Boolean(activeSession),
-        connected: member.connected,
-        battery: member.battery,
+        connected: deviceStatus.connected,
+        battery: deviceStatus.battery,
         lastMessage: null,
       }}
     />

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { syncActiveSessions } from '@/lib/session-engine';
+import { getEffectiveLovenseStatus } from '@/lib/lovense/service';
 
 export async function GET(request: NextRequest) {
   await syncActiveSessions();
@@ -51,6 +52,7 @@ export async function GET(request: NextRequest) {
   const elapsedSeconds = activeSession
     ? Math.floor((Date.now() - activeSession.startedAt.getTime()) / 1000)
     : 0;
+  const deviceStatus = await getEffectiveLovenseStatus(member.id);
 
   return NextResponse.json({
     memberId: member.id,
@@ -62,9 +64,9 @@ export async function GET(request: NextRequest) {
     isWaiting,
     remainingCredit: member.remainingCredit,
     weeklyCredit: member.weeklyCredit,
-    connected: member.connected,
-    battery: member.battery,
-    toyName: member.toyName,
+    connected: deviceStatus.connected,
+    battery: deviceStatus.battery,
+    toyName: deviceStatus.toyName,
     elapsedSeconds,
     estimatedEndAt: member.isControlling
       ? new Date(Date.now() + member.remainingCredit * 1000).toISOString()

@@ -183,19 +183,53 @@ export async function connect(memberId: string): Promise<boolean> {
  */
 export async function getToys(memberId: string) {
   const member = await db.member.findUniqueOrThrow({ where: { id: memberId } });
-  const toys = parseStoredToys(member.toysJson);
+  const source = await findEffectiveLovenseStatusSource(member);
+  const toys = parseStoredToys(source?.toysJson ?? member.toysJson);
 
   if (toys.length > 0) return toys;
 
-  if (!member.toyId) return [];
+  const toySource = source ?? member;
+  if (!toySource.toyId) return [];
   return [
     {
-      id: member.toyId,
-      name: member.toyName ?? member.toyType ?? 'Jouet',
-      status: (member.connected ? 1 : 0) as 0 | 1,
-      battery: member.battery ?? undefined,
+      id: toySource.toyId,
+      name: toySource.toyName ?? toySource.toyType ?? 'Jouet',
+      status: (Boolean(source?.connected) ? 1 : 0) as 0 | 1,
+      battery: toySource.battery ?? undefined,
     },
   ];
+}
+
+export async function getEffectiveLovenseStatus(memberId: string) {
+  const member = await db.member.findUniqueOrThrow({ where: { id: memberId } });
+  const source = await findEffectiveLovenseStatusSource(member);
+  const toySource = source ?? member;
+  const toys = parseStoredToys(toySource.toysJson);
+  const connectedToy = toys.find((toy) => toy.status === 1) ?? toys[0];
+
+  return {
+    connected: Boolean(source?.connected),
+    battery: toySource.battery ?? connectedToy?.battery ?? null,
+    toyName: connectedToy?.nickName ?? connectedToy?.name ?? toySource.toyName,
+    toys,
+  };
+}
+
+async function findEffectiveLovenseStatusSource(member: Member): Promise<Member | null> {
+  if (member.connected && member.deviceDomain && member.httpsPort) {
+    return member;
+  }
+
+  return db.member.findFirst({
+    where: {
+      ownerId: member.ownerId,
+      connected: true,
+      lovenseUserId: { not: null },
+      deviceDomain: { not: null },
+      httpsPort: { not: null },
+    },
+    orderBy: { updatedAt: 'desc' },
+  });
 }
 
 export async function getToyStatus(memberId: string) {

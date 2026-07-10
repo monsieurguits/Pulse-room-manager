@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import {
   Activity,
-  BatteryMedium,
   Clock3,
   Gauge,
   Pause,
@@ -380,19 +379,13 @@ export function ControlPanel({
               </div>
             </div>
 
-            <div className="grid gap-3 p-5 sm:grid-cols-3 lg:grid-cols-1 lg:p-6">
+            <div className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-1 lg:p-6">
               <StatusPill icon={<ShieldCheck size={16} />} label="Session" value={sessionLabel} className={sessionClassName} />
               <StatusPill
                 icon={realtime.connected ? <Wifi size={16} /> : <WifiOff size={16} />}
                 label="Appareil"
                 value={deviceLabel}
                 className={deviceClassName}
-              />
-              <StatusPill
-                icon={<BatteryMedium size={16} />}
-                label="Batterie"
-                value={realtime.battery !== null ? `${realtime.battery}%` : 'Non disponible'}
-                className="border-base-700 bg-base-850 text-neutral-300"
               />
             </div>
           </div>
