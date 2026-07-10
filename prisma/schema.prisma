@@ -19,6 +19,7 @@ model Member {
   owner     AdminUser? @relation(fields: [ownerId], references: [id], onDelete: SetNull)
 
   username  String
+  email     String?
   platform  String // ex: "OnlyFans", "Twitch", "Chaturbate", "Cam4", "Stripchat"
   qrImageUrl String?
 

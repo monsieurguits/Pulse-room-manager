@@ -6,9 +6,17 @@ import { db } from '@/lib/db';
 import { stopSession } from '@/lib/session-engine';
 import { canAccessMember, memberOwnerWhere, requireAdmin } from '@/lib/auth';
 import { createUniqueMemberAccessCode } from '@/lib/member-code';
+import { sendMemberAccessEmail } from '@/lib/email';
 
 const memberSchema = z.object({
   username: z.string().min(2, 'Le pseudo doit contenir au moins 2 caractères.'),
+  email: z.preprocess(
+    (value) => {
+      const email = String(value ?? '').trim();
+      return email.length > 0 ? email.toLowerCase() : null;
+    },
+    z.string().email('Email invalide.').nullable(),
+  ),
   platform: z.string().min(1, 'La plateforme est requise.'),
   memberSince: z.coerce.date(),
   startDate: z.coerce.date(),
@@ -17,7 +25,7 @@ const memberSchema = z.object({
   weeklyCreditMinutes: z.coerce.number().int().min(0),
 });
 
-export type MemberFormState = { errors?: Record<string, string[]>; success?: boolean };
+export type MemberFormState = { errors?: Record<string, string[]>; success?: boolean; emailWarning?: string };
 export type AddMemberCreditState = { errors?: Record<string, string[]>; success?: boolean; addedSeconds?: number };
 
 const addCreditSchema = z.object({
@@ -28,6 +36,7 @@ export async function createMember(_prev: MemberFormState, formData: FormData): 
   const admin = await requireAdmin();
   const parsed = memberSchema.safeParse({
     username: formData.get('username'),
+    email: formData.get('email'),
     platform: formData.get('platform'),
     memberSince: formData.get('memberSince'),
     startDate: formData.get('startDate'),
@@ -42,11 +51,12 @@ export async function createMember(_prev: MemberFormState, formData: FormData): 
   const { weeklyCreditMinutes, ...rest } = parsed.data;
   const weeklyCredit = weeklyCreditMinutes * 60;
 
-  await db.member.create({
+  const accessCode = await createUniqueMemberAccessCode();
+  const member = await db.member.create({
     data: {
       ...rest,
       ownerId: admin.id,
-      accessCode: await createUniqueMemberAccessCode(),
+      accessCode,
       weeklyCredit,
       remainingCredit: weeklyCredit,
     },
@@ -54,6 +64,21 @@ export async function createMember(_prev: MemberFormState, formData: FormData): 
 
   revalidatePath('/members');
   revalidatePath('/dashboard');
+
+  if (member.email) {
+    try {
+      await sendMemberAccessEmail({
+        memberEmail: member.email,
+        memberUsername: member.username,
+        modelName: admin.name,
+        modelEmail: admin.email,
+        accessCode,
+      });
+    } catch (error) {
+      return { success: true, emailWarning: (error as Error).message };
+    }
+  }
+
   return { success: true };
 }
 
@@ -66,6 +91,7 @@ export async function updateMember(memberId: string, _prev: MemberFormState, for
 
   const parsed = memberSchema.partial().safeParse({
     username: formData.get('username') || undefined,
+    email: formData.get('email') ?? undefined,
     platform: formData.get('platform') || undefined,
     memberSince: formData.get('memberSince') || undefined,
     startDate: formData.get('startDate') || undefined,

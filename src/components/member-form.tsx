@@ -28,11 +28,15 @@ export function MemberForm({ member }: { member?: Member }) {
 
   useEffect(() => {
     if (state.success) {
-      toast.success(member ? 'Membre mis à jour.' : 'Membre créé.');
+      if (state.emailWarning) {
+        toast.warning(`${member ? 'Membre mis à jour' : 'Membre créé'}, mais email non envoyé : ${state.emailWarning}`);
+      } else {
+        toast.success(member ? 'Membre mis à jour.' : 'Membre créé et email envoyé si renseigné.');
+      }
       router.push('/members');
       router.refresh();
     }
-  }, [state.success, member, router]);
+  }, [state.success, state.emailWarning, member, router]);
 
   return (
     <form action={formAction} className="card flex flex-col gap-5 p-6">
@@ -44,6 +48,17 @@ export function MemberForm({ member }: { member?: Member }) {
           placeholder="ex: LunaRose"
           required
         />
+      </Field>
+
+      <Field label="Email du membre" name="email" error={state.errors?.email}>
+        <input
+          name="email"
+          type="email"
+          defaultValue={member?.email ?? ''}
+          className="input-field"
+          placeholder="membre@example.com"
+        />
+        <p className="mt-1 text-xs text-neutral-500">Optionnel. Si renseigné, le membre reçoit automatiquement son code d’accès.</p>
       </Field>
 
       <Field label="Plateforme" name="platform" error={state.errors?.platform}>

@@ -33,7 +33,13 @@ export function QrPairingPanel({
       setQrImage(json.qrImageUrl as string);
       setConnectionCode(typeof json.connectionCode === 'string' && json.connectionCode ? json.connectionCode : null);
       setAccessCode(typeof json.accessCode === 'string' && json.accessCode ? json.accessCode : null);
-      toast.success(forceRefresh ? 'Nouveau QR code Lovense généré.' : 'QR code Lovense généré.');
+      if (forceRefresh && json.emailWarning) {
+        toast.warning(`Nouveau QR généré, mais email non envoyé : ${json.emailWarning}`);
+      } else if (forceRefresh && json.emailSent) {
+        toast.success('Nouveau QR généré et nouveau code envoyé au membre.');
+      } else {
+        toast.success(forceRefresh ? 'Nouveau QR code Lovense généré.' : 'QR code Lovense généré.');
+      }
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
