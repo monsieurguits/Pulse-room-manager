@@ -19,8 +19,8 @@ export async function POST(request: NextRequest) {
   try {
     const memberId = await resolveMemberId(parsed.data);
     await assertSessionController(memberId, parsed.data.controlClientId);
-    const session = await stopSession(memberId, 'manual');
     broadcast({ type: 'session-stopped', memberId, reason: 'manual' });
+    const session = await stopSession(memberId, 'manual');
     return NextResponse.json({ session });
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 409 });

@@ -145,5 +145,15 @@ export function useRealtimeMember(memberId: string, initial: RealtimeMemberState
     };
   }, [controlClientId, refreshOwnership]);
 
-  return { ...state, refresh: refreshOwnership };
+  const stopOptimistically = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      isControlling: false,
+      canControl: false,
+      isWaiting: false,
+      elapsedSeconds: 0,
+    }));
+  }, []);
+
+  return { ...state, refresh: refreshOwnership, stopOptimistically };
 }

@@ -210,7 +210,14 @@ export function ControlPanel({
   }
 
   const handleStop = () => {
+    if (intensitySendTimer.current) {
+      window.clearTimeout(intensitySendTimer.current);
+      intensitySendTimer.current = null;
+    }
+    queuedIntensity.current = null;
     setActivePattern(null);
+    lastSentIntensity.current = 0;
+    realtime.stopOptimistically();
     call('/api/control/stop');
   };
 

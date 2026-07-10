@@ -175,7 +175,7 @@ export function ObsCurveOverlay({ token }: { token: string }) {
     }
 
     void poll();
-    const interval = window.setInterval(() => void poll(), 600);
+    const interval = window.setInterval(() => void poll(), 250);
     return () => {
       stopped = true;
       window.clearInterval(interval);

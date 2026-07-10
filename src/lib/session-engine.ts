@@ -81,6 +81,7 @@ export async function stopSession(memberId: string, reason: 'manual' | 'credit-e
 
   if (!session) return null;
 
+  const stopToyPromise = reason !== 'restart' ? stopToy(memberId).catch(() => undefined) : Promise.resolve();
   const elapsedSeconds = Math.max(0, Math.floor((Date.now() - session.startedAt.getTime()) / 1000));
 
   const [updatedSession] = await db.$transaction([
@@ -98,16 +99,12 @@ export async function stopSession(memberId: string, reason: 'manual' | 'credit-e
     }),
   ]);
 
-  // On coupe le jouet uniquement si l'arrêt n'est pas dû à un simple redémarrage serveur
-  // (dans ce cas, la commande Stop a déjà été envoyée avant l'arrêt, voir restoreActiveSessions).
-  if (reason !== 'restart') {
-    await stopToy(memberId).catch(() => undefined);
-    await triggerPendingTipCommands();
-  } else {
-    await triggerPendingTipCommands();
-  }
+  await Promise.all([
+    stopToyPromise,
+    createControlOverlayEvent(memberId, 'control-stopped').catch(() => undefined),
+  ]);
 
-  await createControlOverlayEvent(memberId, 'control-stopped').catch(() => undefined);
+  void triggerPendingTipCommands();
 
   return updatedSession;
 }
