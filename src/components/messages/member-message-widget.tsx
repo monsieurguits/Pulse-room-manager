@@ -111,7 +111,7 @@ export function MemberMessageWidget({ secureToken, modelName }: { secureToken: s
               </button>
             </div>
           </form>
-          <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto bg-base-950/65 p-4">
+          <div ref={listRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain bg-base-950/65 p-4">
             {displayedMessages.map((message) => {
               const mine = message.sender === 'member';
               return (

@@ -198,7 +198,7 @@ export function AdminMessagesPanel({
   }
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-base-800 bg-base-900 shadow-2xl">
+    <div className="flex h-[calc(100svh-10rem)] min-h-[620px] flex-col overflow-hidden rounded-3xl border border-base-800 bg-base-900 shadow-2xl">
       {quickContactItems.length > 0 ? (
         <div className="sticky top-0 z-10 border-b border-base-800 bg-base-900/95 p-3 backdrop-blur-xl">
           <div className="flex gap-2 overflow-x-auto pb-1">
@@ -230,15 +230,15 @@ export function AdminMessagesPanel({
         </div>
       ) : null}
 
-      <div className="grid min-h-[calc(100svh-15.5rem)] overflow-hidden lg:grid-cols-[340px_1fr]">
-        <aside className="border-b border-base-800 lg:border-b-0 lg:border-r">
+      <div className="grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[340px_1fr]">
+        <aside className="min-h-0 overflow-hidden border-b border-base-800 lg:border-b-0 lg:border-r">
           <div className="border-b border-base-800 p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-neutral-100">
               <MessageCircle size={18} className="text-accent-300" />
               Conversations membres
             </div>
           </div>
-          <div className="max-h-[38svh] overflow-y-auto lg:max-h-[calc(100svh-17rem)]">
+          <div className="max-h-[34svh] overflow-y-auto overscroll-contain lg:h-[calc(100%-57px)] lg:max-h-none">
             {conversations.map((conversation) => (
               <button
                 key={conversation.id}
@@ -268,7 +268,7 @@ export function AdminMessagesPanel({
           </div>
         </aside>
 
-        <section className="flex min-h-[520px] flex-col">
+        <section className="flex min-h-0 flex-col overflow-hidden">
           <header className="border-b border-base-800 p-4">
             <p className="text-sm font-semibold text-neutral-100">{selectedTitle}</p>
             <p className="text-xs text-neutral-500">{selectedSubtitle}</p>
@@ -293,7 +293,7 @@ export function AdminMessagesPanel({
             </div>
           </form>
 
-          <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto bg-base-950/55 p-4">
+          <div ref={listRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain bg-base-950/55 p-4">
             {loading ? <p className="text-center text-sm text-neutral-500">Chargement...</p> : null}
             {displayedMessages.map((message) => {
               const mine = message.kind === 'member' ? message.sender === 'model' : message.senderAdminId === currentAdminId;
