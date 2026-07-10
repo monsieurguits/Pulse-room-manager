@@ -9,6 +9,7 @@ import { getDashboardWeather } from '@/lib/weather';
 import { getMaintenanceSettings } from '@/lib/maintenance';
 import { MaintenanceForm } from '@/components/maintenance-form';
 import { MaintenanceNotice } from '@/components/maintenance-notice';
+import { getModelWeatherMessage } from '@/lib/weather-messages';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,13 +33,7 @@ export default async function DashboardPage() {
         </div>
         <p className="text-sm font-medium leading-6 text-neutral-300 sm:text-base">
           {weather ? (
-            <>
-              Hello, <span className="font-semibold text-neutral-50">{admin.name}</span>, aujourd&apos;hui les températures
-              extérieures sont de{' '}
-              <span className="font-semibold text-neutral-50">{Math.round(weather.temperature)}°C</span> à{' '}
-              <span className="font-semibold text-neutral-50">{weather.city}</span>. Il est temps de{' '}
-              <span className="font-semibold text-accent-300">{weather.action}</span>.
-            </>
+            getModelWeatherMessage({ pseudo: admin.name, temperature: weather.temperature })
           ) : (
             <>
               Hello, <span className="font-semibold text-neutral-50">{admin.name}</span>, nous vous souhaitons une belle journée.

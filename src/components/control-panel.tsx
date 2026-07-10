@@ -19,6 +19,7 @@ import {
 import { useRealtimeMember, type RealtimeMemberState } from '@/hooks/use-realtime-member';
 import { MemberTierBadge } from '@/components/member-tier-badge';
 import { formatDuration, formatEstimatedEnd } from '@/lib/utils';
+import { getMemberWeatherMessage } from '@/lib/weather-messages';
 import type { LovenseToy } from '@/types';
 
 const LOVENSE_PRESETS = [
@@ -330,7 +331,9 @@ export function ControlPanel({
   const memberSinceLabel = formatDisplayDate(memberSince);
   const subscriptionPeriodLabel = `${formatDisplayDate(subscriptionStartDate)} - ${formatDisplayDate(subscriptionEndDate)}`;
   const currentMonthPeriodLabel = `${formatDisplayDate(currentMonthStartDate)} - ${formatDisplayDate(currentMonthEndDate)}`;
-  const memberWeatherAction = memberWeather && memberWeather.temperature >= 21 ? 'le faire mouiller' : 'le réchauffer';
+  const memberWeatherMessage = memberWeather
+    ? getMemberWeatherMessage({ pseudo: username, modelName: memberWeather.modelName, temperature: memberWeather.temperature })
+    : null;
 
   return (
     <main className="min-h-screen bg-base-950 px-4 py-6 text-neutral-100 sm:px-6 lg:px-8 lg:py-10">
@@ -340,12 +343,7 @@ export function ControlPanel({
             <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-accent-500/15 text-accent-300">
               <ThermometerSun size={18} />
             </div>
-            <p className="text-sm font-medium leading-6 text-neutral-300 sm:text-base">
-              Hello, <span className="font-semibold text-neutral-50">{username}</span>, il fait actuellement{' '}
-              <span className="font-semibold text-neutral-50">{Math.round(memberWeather.temperature)}°C</span> chez{' '}
-              <span className="font-semibold text-neutral-50">{memberWeather.modelName}</span>. Il est temps de{' '}
-              <span className="font-semibold text-accent-300">{memberWeatherAction}</span>.
-            </p>
+            <p className="text-sm font-medium leading-6 text-neutral-300 sm:text-base">{memberWeatherMessage}</p>
           </section>
         ) : null}
 
