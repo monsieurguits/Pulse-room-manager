@@ -45,7 +45,18 @@ export function MemberMessageWidget({ secureToken, modelName }: { secureToken: s
     const content = body.trim();
     if (!content) return;
 
+    const optimisticMessage: DirectMessage = {
+      id: `optimistic-${Date.now()}`,
+      sender: 'member',
+      body: content,
+      createdAt: new Date().toISOString(),
+      readByMemberAt: new Date().toISOString(),
+    };
+
+    setMessages((current) => [...current, optimisticMessage]);
+    setBody('');
     setSending(true);
+
     try {
       const response = await fetch('/api/messages/member', {
         method: 'POST',
@@ -54,9 +65,10 @@ export function MemberMessageWidget({ secureToken, modelName }: { secureToken: s
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? 'Message non envoyé.');
-      setBody('');
-      await refresh(true);
+      setMessages((current) => current.map((message) => (message.id === optimisticMessage.id ? payload.message : message)));
     } catch (error) {
+      setMessages((current) => current.filter((message) => message.id !== optimisticMessage.id));
+      setBody(content);
       toast.error((error as Error).message);
     } finally {
       setSending(false);

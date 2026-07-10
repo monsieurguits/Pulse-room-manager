@@ -27,6 +27,7 @@ export function AdminMessagesPanel({ initialConversations }: { initialConversati
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const requestSeqRef = useRef(0);
 
   const selected = useMemo(
     () => conversations.find((conversation) => conversation.id === selectedId) ?? null,
@@ -40,22 +41,27 @@ export function AdminMessagesPanel({ initialConversations }: { initialConversati
     setConversations(payload.conversations ?? []);
   }
 
-  async function refreshMessages(memberId = selectedId) {
+  async function refreshMessages(memberId = selectedId, options: { showLoading?: boolean } = {}) {
     if (!memberId) return;
-    setLoading(true);
+    const requestSeq = requestSeqRef.current + 1;
+    requestSeqRef.current = requestSeq;
+    if (options.showLoading) setLoading(true);
+
     try {
       const response = await fetch(`/api/messages/admin?memberId=${encodeURIComponent(memberId)}`, { cache: 'no-store' });
       if (!response.ok) return;
       const payload = (await response.json()) as { messages?: DirectMessage[] };
+      if (requestSeqRef.current !== requestSeq) return;
       setMessages(payload.messages ?? []);
       void refreshConversations();
     } finally {
-      setLoading(false);
+      if (options.showLoading) setLoading(false);
     }
   }
 
   useEffect(() => {
-    void refreshMessages(selectedId);
+    setMessages([]);
+    void refreshMessages(selectedId, { showLoading: true });
   }, [selectedId]);
 
   useEffect(() => {
@@ -76,7 +82,24 @@ export function AdminMessagesPanel({ initialConversations }: { initialConversati
     const content = body.trim();
     if (!selectedId || !content) return;
 
+    const optimisticMessage: DirectMessage = {
+      id: `optimistic-${Date.now()}`,
+      sender: 'model',
+      body: content,
+      createdAt: new Date().toISOString(),
+    };
+
+    setMessages((current) => [...current, optimisticMessage]);
+    setConversations((current) =>
+      current.map((conversation) =>
+        conversation.id === selectedId
+          ? { ...conversation, lastMessage: { body: content, sender: 'model', createdAt: optimisticMessage.createdAt } }
+          : conversation,
+      ),
+    );
+    setBody('');
     setSending(true);
+
     try {
       const response = await fetch('/api/messages/admin', {
         method: 'POST',
@@ -85,9 +108,11 @@ export function AdminMessagesPanel({ initialConversations }: { initialConversati
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? 'Message non envoyé.');
-      setBody('');
-      await refreshMessages(selectedId);
+      setMessages((current) => current.map((message) => (message.id === optimisticMessage.id ? payload.message : message)));
+      void refreshConversations();
     } catch (error) {
+      setMessages((current) => current.filter((message) => message.id !== optimisticMessage.id));
+      setBody(content);
       toast.error((error as Error).message);
     } finally {
       setSending(false);
@@ -140,7 +165,7 @@ export function AdminMessagesPanel({ initialConversations }: { initialConversati
         </header>
 
         <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto bg-base-950/55 p-4">
-          {loading && messages.length === 0 ? <p className="text-center text-sm text-neutral-500">Chargement...</p> : null}
+          {loading ? <p className="text-center text-sm text-neutral-500">Chargement...</p> : null}
           {messages.map((message) => {
             const mine = message.sender === 'model';
             return (
