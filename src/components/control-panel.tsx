@@ -7,9 +7,7 @@ import {
   Activity,
   Clock3,
   Gauge,
-  Pause,
   Play,
-  PlayCircle,
   ShieldCheck,
   Square,
   TimerReset,
@@ -103,7 +101,6 @@ export function ControlPanel({
   const [controlClientId, setControlClientId] = useState<string | null>(null);
   const realtime = useRealtimeMember(memberId, initial, controlClientId);
   const [isPending, startTransition] = useTransition();
-  const [paused, setPaused] = useState(false);
   const [intensity, setIntensity] = useState(10);
   const [activePattern, setActivePattern] = useState<PatternPreview | null>(null);
   const [visualPosition, setVisualPosition] = useState(0);
@@ -113,9 +110,8 @@ export function ControlPanel({
   const queuedIntensity = useRef<number | null>(null);
   const lastSentIntensity = useRef<number | null>(null);
   const hasControl = realtime.isControlling && realtime.canControl;
-  const effectivePaused = hasControl && paused;
   const previewStrengths = activePattern?.strengths.length ? activePattern.strengths : [intensity];
-  const previewValue = activePattern && hasControl && !effectivePaused
+  const previewValue = activePattern && hasControl
     ? interpolatePattern(previewStrengths, visualPosition)
     : intensity;
   const activeVisualStep = Math.floor(visualPosition) % previewStrengths.length;
@@ -150,7 +146,7 @@ export function ControlPanel({
   }, [secureToken]);
 
   useEffect(() => {
-    if (!activePattern || !hasControl || effectivePaused) return;
+    if (!activePattern || !hasControl) return;
 
     let frameId = 0;
     const startedAt = performance.now();
@@ -164,7 +160,7 @@ export function ControlPanel({
     frameId = window.requestAnimationFrame(animate);
 
     return () => window.cancelAnimationFrame(frameId);
-  }, [activePattern, effectivePaused, hasControl]);
+  }, [activePattern, hasControl]);
 
   useEffect(() => {
     return () => {
@@ -199,10 +195,14 @@ export function ControlPanel({
   function handleStart() {
     startTransition(async () => {
       try {
+        if (!realtime.connected) {
+          toast.error("L'appareil Lovense est déconnecté.");
+          return;
+        }
+
         await post('/api/control/start');
         await sendIntensityCommand(intensity);
         await realtime.refresh();
-        setPaused(false);
       } catch (error) {
         toast.error((error as Error).message);
       }
@@ -220,7 +220,7 @@ export function ControlPanel({
     setActivePattern(null);
     setIntensity(nextLevel);
 
-    if (hasControl && !effectivePaused) {
+    if (hasControl) {
       queueIntensityCommand(nextLevel, true);
     }
   };
@@ -279,7 +279,7 @@ export function ControlPanel({
   }
 
   function commitIntensity() {
-    if (hasControl && !effectivePaused) {
+    if (hasControl) {
       queueIntensityCommand(intensity, true);
     }
   }
@@ -291,35 +291,12 @@ export function ControlPanel({
       strength: preset.strengths.join(';'),
       timeSec: 0,
     });
-    setPaused(false);
   };
 
   const handlePattern = (pattern: (typeof CUSTOM_PATTERNS)[number]) => {
     setActivePattern({ label: pattern.label, strengths: parseStrengths(pattern.strength), stepMs: pattern.stepMs });
     call('/api/lovense/pattern', { rule: pattern.rule, strength: pattern.strength, timeSec: 0 });
-    setPaused(false);
   };
-
-  async function handlePauseResume() {
-    startTransition(async () => {
-      try {
-        if (!effectivePaused) {
-          await post('/api/lovense/stop');
-          await realtime.refresh();
-          setPaused(true);
-          toast.info('Contrôle en pause.');
-        } else {
-          await post('/api/lovense/vibrate', { level: intensity, timeSec: 0 });
-          await realtime.refresh();
-          setActivePattern(null);
-          setPaused(false);
-          toast.info('Contrôle repris.');
-        }
-      } catch (error) {
-        toast.error((error as Error).message);
-      }
-    });
-  }
 
   if (!active) {
     return (
@@ -478,7 +455,7 @@ export function ControlPanel({
                 onPointerUp={commitIntensity}
                 onTouchEnd={commitIntensity}
                 onMouseUp={commitIntensity}
-                disabled={effectivePaused}
+                disabled={!hasControl}
                 className="intensity-slider w-full"
                 style={{ ['--intensity-progress' as string]: `${(intensity / 20) * 100}%` }}
               />
@@ -529,7 +506,7 @@ export function ControlPanel({
                     key={preset.name}
                     type="button"
                     onClick={() => handlePreset(preset)}
-                    disabled={isPending || !hasControl || effectivePaused}
+                    disabled={isPending || !hasControl}
                     className="btn-secondary min-h-11 justify-center px-3 py-2 text-xs"
                   >
                     {preset.label}
@@ -542,7 +519,7 @@ export function ControlPanel({
                     key={pattern.label}
                     type="button"
                     onClick={() => handlePattern(pattern)}
-                    disabled={isPending || !hasControl || effectivePaused}
+                    disabled={isPending || !hasControl}
                     className="btn-secondary min-h-11 justify-center px-3 py-2 text-xs"
                   >
                     {pattern.label}
@@ -556,23 +533,17 @@ export function ControlPanel({
                 {!realtime.isControlling ? (
                   <button
                     onClick={handleStart}
-                    disabled={isPending || !controlClientId || realtime.remainingCredit <= 0}
+                    disabled={isPending || !controlClientId || realtime.remainingCredit <= 0 || !realtime.connected}
                     className="btn-accent col-span-2 min-h-12"
                   >
                     <Play size={18} />
                     Démarrer
                   </button>
                 ) : hasControl ? (
-                  <>
-                    <button onClick={handlePauseResume} disabled={isPending} className="btn-secondary min-h-12">
-                      {effectivePaused ? <PlayCircle size={18} /> : <Pause size={18} />}
-                      {effectivePaused ? 'Reprendre' : 'Pause'}
-                    </button>
-                    <button onClick={handleStop} disabled={isPending} className="btn-secondary min-h-12 hover:border-red-500 hover:text-red-400">
-                      <Square size={18} />
-                      Arrêter
-                    </button>
-                  </>
+                  <button onClick={handleStop} disabled={isPending} className="btn-secondary col-span-2 min-h-12 hover:border-red-500 hover:text-red-400">
+                    <Square size={18} />
+                    Arrêter
+                  </button>
                 ) : (
                   <button disabled className="btn-secondary col-span-2 min-h-12 cursor-not-allowed opacity-70">
                     Liste d&apos;attente
@@ -583,6 +554,12 @@ export function ControlPanel({
               {realtime.isWaiting && (
                 <p className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-center text-sm text-amber-200">
                   Vous êtes sur la liste d&apos;attente. Vous pourrez démarrer dès que le contrôle en cours sera arrêté.
+                </p>
+              )}
+
+              {!realtime.connected && !realtime.isControlling && (
+                <p className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-center text-sm text-red-300">
+                  L&apos;appareil Lovense est déconnecté. Le contrôle pourra démarrer dès qu&apos;il sera reconnecté.
                 </p>
               )}
 
