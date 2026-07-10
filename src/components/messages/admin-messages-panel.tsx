@@ -76,6 +76,7 @@ export function AdminMessagesPanel({
   );
   const selectedTitle = selectedMember?.username ?? selectedContact?.label ?? 'Sélectionnez une conversation';
   const selectedSubtitle = selectedMember?.platform ?? selectedContact?.detail ?? 'Les messages apparaîtront ici.';
+  const displayedMessages = useMemo(() => [...messages].reverse(), [messages]);
 
   async function refreshConversations() {
     const response = await fetch('/api/messages/admin', { cache: 'no-store' });
@@ -136,7 +137,7 @@ export function AdminMessagesPanel({
   }, [selectedTarget]);
 
   useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
+    listRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }, [messages.length, selectedTarget]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -273,9 +274,28 @@ export function AdminMessagesPanel({
             <p className="text-xs text-neutral-500">{selectedSubtitle}</p>
           </header>
 
+          <form onSubmit={submit} className="sticky top-0 z-10 border-b border-base-800 bg-base-900 p-3 shadow-lg shadow-black/10">
+            <div className="flex gap-2">
+              <textarea
+                value={body}
+                onChange={(event) => setBody(event.target.value)}
+                onKeyDown={submitOnEnter}
+                disabled={!selectedTarget || sending}
+                placeholder={selectedTarget?.kind === 'internal' ? 'Écrire un message...' : 'Répondre au membre...'}
+                className="input-field min-h-12 flex-1 resize-none py-3"
+                rows={1}
+                maxLength={1000}
+              />
+              <button type="submit" disabled={!selectedTarget || sending || !body.trim()} className="btn-accent h-12 shrink-0 px-4">
+                <Send size={17} />
+                <span className="hidden sm:inline">Envoyer</span>
+              </button>
+            </div>
+          </form>
+
           <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto bg-base-950/55 p-4">
             {loading ? <p className="text-center text-sm text-neutral-500">Chargement...</p> : null}
-            {messages.map((message) => {
+            {displayedMessages.map((message) => {
               const mine = message.kind === 'member' ? message.sender === 'model' : message.senderAdminId === currentAdminId;
               return (
                 <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
@@ -296,25 +316,6 @@ export function AdminMessagesPanel({
               </p>
             ) : null}
           </div>
-
-          <form onSubmit={submit} className="border-t border-base-800 bg-base-900 p-3">
-            <div className="flex gap-2">
-              <textarea
-                value={body}
-                onChange={(event) => setBody(event.target.value)}
-                onKeyDown={submitOnEnter}
-                disabled={!selectedTarget || sending}
-                placeholder={selectedTarget?.kind === 'internal' ? 'Écrire un message...' : 'Répondre au membre...'}
-                className="input-field min-h-12 flex-1 resize-none py-3"
-                rows={1}
-                maxLength={1000}
-              />
-              <button type="submit" disabled={!selectedTarget || sending || !body.trim()} className="btn-accent h-12 shrink-0 px-4">
-                <Send size={17} />
-                <span className="hidden sm:inline">Envoyer</span>
-              </button>
-            </div>
-          </form>
         </section>
       </div>
     </div>

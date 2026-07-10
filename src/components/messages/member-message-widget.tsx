@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { MessageCircle, Send, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -19,6 +19,7 @@ export function MemberMessageWidget({ secureToken, modelName }: { secureToken: s
   const [sending, setSending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const unreadCount = open ? 0 : messages.filter((message) => message.sender === 'model' && !message.readByMemberAt).length;
+  const displayedMessages = useMemo(() => [...messages].reverse(), [messages]);
 
   async function refresh(markRead = open) {
     const params = new URLSearchParams({ token: secureToken });
@@ -37,7 +38,7 @@ export function MemberMessageWidget({ secureToken, modelName }: { secureToken: s
 
   useEffect(() => {
     if (!open) return;
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
+    listRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }, [open, messages.length]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -94,21 +95,7 @@ export function MemberMessageWidget({ secureToken, modelName }: { secureToken: s
               <X size={17} />
             </button>
           </header>
-          <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto bg-base-950/65 p-4">
-            {messages.map((message) => {
-              const mine = message.sender === 'member';
-              return (
-                <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-6 ${mine ? 'bg-accent-500 text-white' : 'border border-base-800 bg-base-900 text-neutral-200'}`}>
-                    <p className="whitespace-pre-wrap break-words">{message.body}</p>
-                    <p className={`mt-1 text-[10px] ${mine ? 'text-white/70' : 'text-neutral-500'}`}>{formatMessageTime(message.createdAt)}</p>
-                  </div>
-                </div>
-              );
-            })}
-            {messages.length === 0 ? <p className="py-8 text-center text-sm text-neutral-500">Écrivez un message au modèle.</p> : null}
-          </div>
-          <form onSubmit={submit} className="border-t border-base-800 p-3">
+          <form onSubmit={submit} className="sticky top-0 z-10 border-b border-base-800 bg-base-900 p-3 shadow-lg shadow-black/10">
             <div className="flex gap-2">
               <textarea
                 value={body}
@@ -124,6 +111,20 @@ export function MemberMessageWidget({ secureToken, modelName }: { secureToken: s
               </button>
             </div>
           </form>
+          <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto bg-base-950/65 p-4">
+            {displayedMessages.map((message) => {
+              const mine = message.sender === 'member';
+              return (
+                <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-6 ${mine ? 'bg-accent-500 text-white' : 'border border-base-800 bg-base-900 text-neutral-200'}`}>
+                    <p className="whitespace-pre-wrap break-words">{message.body}</p>
+                    <p className={`mt-1 text-[10px] ${mine ? 'text-white/70' : 'text-neutral-500'}`}>{formatMessageTime(message.createdAt)}</p>
+                  </div>
+                </div>
+              );
+            })}
+            {messages.length === 0 ? <p className="py-8 text-center text-sm text-neutral-500">Écrivez un message au modèle.</p> : null}
+          </div>
         </section>
       ) : (
         <button type="button" onClick={() => setOpen(true)} className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-500 text-white shadow-2xl shadow-accent-500/30">
