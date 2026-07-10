@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { LayoutDashboard, LogOut, MessageCircle, Settings, SlidersHorizontal, User, UserCog, Users } from 'lucide-react';
+import { LayoutDashboard, LogOut, Settings, SlidersHorizontal, User, UserCog, Users } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { hasAcceptedCurrentLegalTerms, requireAdmin } from '@/lib/auth';
 import { logoutAdmin } from '@/server-actions/auth';
@@ -7,11 +7,11 @@ import { getMaintenanceSettings } from '@/lib/maintenance';
 import { MaintenanceNotice } from '@/components/maintenance-notice';
 import { db } from '@/lib/db';
 import { memberOwnerWhere } from '@/lib/auth';
+import { MessagesNavLink } from '@/components/messages/messages-nav-link';
 
 const NAV = [
   { href: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/members', label: 'Membres', icon: Users },
-  { href: '/messages', label: 'Messages', icon: MessageCircle },
   { href: '/models', label: 'Modèles', icon: UserCog, ownerOnly: true },
   { href: '/dashboard/account', label: 'Compte', icon: User },
   { href: '/dashboard/technical', label: 'Technique', icon: SlidersHorizontal },
@@ -48,6 +48,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </form>
         </div>
         <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+          <MessagesNavLink initialUnread={unreadMessages} compact />
           {nav.map((item) => (
             <Link
               key={item.href}
@@ -56,9 +57,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             >
               <item.icon size={15} />
               {item.label}
-              {item.href === '/messages' && unreadMessages > 0 ? (
-                <span className="ml-1 rounded-full bg-accent-500 px-1.5 py-0.5 text-[10px] font-black text-white">{unreadMessages}</span>
-              ) : null}
             </Link>
           ))}
         </nav>
@@ -69,6 +67,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <span className="text-lg font-bold tracking-[0.18em] text-neutral-50">PULSEROOM</span>
         </div>
         <nav className="flex flex-col gap-1">
+          <MessagesNavLink initialUnread={unreadMessages} />
           {nav.map((item) => (
             <Link
               key={item.href}
@@ -77,9 +76,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             >
               <item.icon size={18} />
               {item.label}
-              {item.href === '/messages' && unreadMessages > 0 ? (
-                <span className="ml-auto rounded-full bg-accent-500 px-2 py-0.5 text-xs font-black text-white">{unreadMessages}</span>
-              ) : null}
             </Link>
           ))}
         </nav>

@@ -19,14 +19,18 @@ const messageSelect = {
 
 export async function GET(request: NextRequest) {
   const secureToken = request.nextUrl.searchParams.get('token') ?? '';
+  const markRead = request.nextUrl.searchParams.get('markRead') === '1';
   if (!secureToken) return NextResponse.json({ error: 'Token requis.' }, { status: 400 });
 
   try {
     const memberId = await resolveMemberId({ secureToken });
-    await db.directMessage.updateMany({
-      where: { memberId, sender: 'model', readByMemberAt: null },
-      data: { readByMemberAt: new Date() },
-    });
+
+    if (markRead) {
+      await db.directMessage.updateMany({
+        where: { memberId, sender: 'model', readByMemberAt: null },
+        data: { readByMemberAt: new Date() },
+      });
+    }
 
     const messages = await db.directMessage.findMany({
       where: { memberId },

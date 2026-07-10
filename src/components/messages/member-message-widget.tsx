@@ -20,15 +20,17 @@ export function MemberMessageWidget({ secureToken, modelName }: { secureToken: s
   const listRef = useRef<HTMLDivElement>(null);
   const unreadCount = open ? 0 : messages.filter((message) => message.sender === 'model' && !message.readByMemberAt).length;
 
-  async function refresh() {
-    const response = await fetch(`/api/messages/member?token=${encodeURIComponent(secureToken)}`, { cache: 'no-store' });
+  async function refresh(markRead = open) {
+    const params = new URLSearchParams({ token: secureToken });
+    if (markRead) params.set('markRead', '1');
+    const response = await fetch(`/api/messages/member?${params.toString()}`, { cache: 'no-store' });
     if (!response.ok) return;
     const payload = (await response.json()) as { messages?: DirectMessage[] };
     setMessages(payload.messages ?? []);
   }
 
   useEffect(() => {
-    void refresh();
+    void refresh(open);
     const intervalId = window.setInterval(() => void refresh(), open ? 2500 : 5000);
     return () => window.clearInterval(intervalId);
   }, [secureToken, open]);
@@ -53,7 +55,7 @@ export function MemberMessageWidget({ secureToken, modelName }: { secureToken: s
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? 'Message non envoyé.');
       setBody('');
-      await refresh();
+      await refresh(true);
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
