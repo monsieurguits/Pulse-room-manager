@@ -137,3 +137,26 @@ export async function promoteModelToOwner(modelId: string): Promise<void> {
   revalidatePath('/models');
   revalidatePath('/dashboard');
 }
+
+export async function demoteAdminToModel(adminId: string): Promise<void> {
+  const owner = await requireOwner();
+  if (adminId === owner.id) return;
+
+  const admin = await db.adminUser.findUnique({
+    where: { id: adminId },
+    select: { id: true, role: true },
+  });
+
+  if (!admin || admin.role !== 'OWNER') return;
+
+  await db.adminUser.update({
+    where: { id: adminId },
+    data: { role: 'MODEL' },
+  });
+
+  await db.adminSession.deleteMany({ where: { userId: adminId } });
+
+  revalidatePath('/models');
+  revalidatePath('/members');
+  revalidatePath('/dashboard');
+}

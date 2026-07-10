@@ -4,6 +4,7 @@ import { ModelForm } from '@/components/model-form';
 import { resetModelPassword, setModelActive } from '@/server-actions/admin-users';
 import { DeleteModelButton } from '@/components/delete-model-button';
 import { PromoteModelButton } from '@/components/promote-model-button';
+import { DemoteAdminButton } from '@/components/demote-admin-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -105,7 +106,11 @@ export default async function ModelsPage() {
                   Réinitialiser
                 </button>
               </form>
-              {model.role === 'MODEL' ? <PromoteModelButton modelId={model.id} modelName={model.name} /> : null}
+              {model.role === 'MODEL' ? (
+                <PromoteModelButton modelId={model.id} modelName={model.name} />
+              ) : (
+                <DemoteAdminButton adminId={model.id} adminName={model.name} />
+              )}
               <DeleteModelButton modelId={model.id} modelName={model.name} role={model.role} />
             </div>
           </article>
@@ -165,7 +170,11 @@ export default async function ModelsPage() {
                         Réinitialiser
                       </button>
                     </form>
-                    {model.role === 'MODEL' ? <PromoteModelButton modelId={model.id} modelName={model.name} /> : null}
+                    {model.role === 'MODEL' ? (
+                      <PromoteModelButton modelId={model.id} modelName={model.name} />
+                    ) : (
+                      <DemoteAdminButton adminId={model.id} adminName={model.name} />
+                    )}
                     <DeleteModelButton modelId={model.id} modelName={model.name} role={model.role} />
                   </div>
                 </td>
