@@ -184,7 +184,10 @@ export async function connect(memberId: string): Promise<boolean> {
 export async function getToys(memberId: string) {
   const member = await db.member.findUniqueOrThrow({ where: { id: memberId } });
   const source = await findEffectiveLovenseStatusSource(member);
-  const toys = parseStoredToys(source?.toysJson ?? member.toysJson);
+  const toys = parseStoredToys(source?.toysJson ?? member.toysJson).map((toy) => ({
+    ...toy,
+    status: (source ? toy.status : 0) as 0 | 1,
+  }));
 
   if (toys.length > 0) return toys;
 
@@ -204,7 +207,10 @@ export async function getEffectiveLovenseStatus(memberId: string) {
   const member = await db.member.findUniqueOrThrow({ where: { id: memberId } });
   const source = await findEffectiveLovenseStatusSource(member);
   const toySource = source ?? member;
-  const toys = parseStoredToys(toySource.toysJson);
+  const toys = parseStoredToys(toySource.toysJson).map((toy) => ({
+    ...toy,
+    status: (source ? toy.status : 0) as 0 | 1,
+  }));
   const connectedToy = toys.find((toy) => toy.status === 1) ?? toys[0];
 
   return {
@@ -216,7 +222,9 @@ export async function getEffectiveLovenseStatus(memberId: string) {
 }
 
 async function findEffectiveLovenseStatusSource(member: Member): Promise<Member | null> {
-  if (member.connected && member.deviceDomain && member.httpsPort) {
+  const minFreshUpdatedAt = await getLovenseFreshnessDate();
+
+  if (member.connected && member.deviceDomain && member.httpsPort && member.updatedAt >= minFreshUpdatedAt) {
     return member;
   }
 
@@ -227,9 +235,21 @@ async function findEffectiveLovenseStatusSource(member: Member): Promise<Member 
       lovenseUserId: { not: null },
       deviceDomain: { not: null },
       httpsPort: { not: null },
+      updatedAt: { gte: minFreshUpdatedAt },
     },
     orderBy: { updatedAt: 'desc' },
   });
+}
+
+async function getLovenseFreshnessDate(): Promise<Date> {
+  const settings = await db.settings.findUnique({
+    where: { id: 'settings' },
+    select: { heartbeatSeconds: true },
+  }).catch(() => null);
+  const heartbeatSeconds = settings?.heartbeatSeconds ?? 30;
+  const graceSeconds = Math.max(90, heartbeatSeconds * 4);
+
+  return new Date(Date.now() - graceSeconds * 1000);
 }
 
 export async function getToyStatus(memberId: string) {
