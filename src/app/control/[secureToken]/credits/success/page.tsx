@@ -25,7 +25,7 @@ export default async function CreditSuccessPage({
   if (stripe && sessionId) {
     const session = await stripe.checkout.sessions.retrieve(sessionId).catch(() => null);
     if (session) {
-      await applyPaidMemberCreditPurchaseFromSession(session, { expectedMemberId: member.id });
+      await applyPaidMemberCreditPurchaseFromSession(session, { expectedMemberId: member.id, stripe });
     }
     member = await db.member.findUnique({ where: { secureToken } });
     if (!member) redirect('/join');

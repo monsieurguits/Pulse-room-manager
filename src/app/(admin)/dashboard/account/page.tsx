@@ -118,7 +118,7 @@ export default async function AccountPage({ searchParams }: { searchParams?: Pro
         status: 'paid',
         paidAt: { gte: monthStart },
       },
-      _sum: { modelRevenueCents: true, amountCents: true, platformFeeCents: true },
+      _sum: { modelRevenueCents: true, amountCents: true, platformFeeCents: true, stripeFeeCents: true },
     }),
     db.memberCreditPurchase.aggregate({
       where: {
@@ -126,7 +126,7 @@ export default async function AccountPage({ searchParams }: { searchParams?: Pro
         status: 'paid',
         paidAt: { gte: monthStart },
       },
-      _sum: { modelRevenueCents: true, amountCents: true },
+      _sum: { modelRevenueCents: true, amountCents: true, stripeFeeCents: true },
     }),
     db.memberCreditPurchase.findMany({
       where: {
@@ -147,6 +147,10 @@ export default async function AccountPage({ searchParams }: { searchParams?: Pro
   const displayedSubscriptionStart = user.subscriptionStartedAt ?? user.legalAcceptedAt;
   const displayedSubscriptionEnd = user.subscriptionEndsAt ?? addOneMonth(user.legalAcceptedAt);
   const monthlyPlatformFeeCents = monthlyCreditRevenue._sum.platformFeeCents ?? 0;
+  const monthlyStripeFeeCents =
+    admin.role === 'OWNER'
+      ? monthlyCreditRevenue._sum.stripeFeeCents ?? 0
+      : monthlyCreditRevenue._sum.stripeFeeCents ?? 0;
   const monthlyModelRevenueCents =
     admin.role === 'OWNER'
       ? monthlyOwnModelCreditRevenue._sum.modelRevenueCents ?? 0
@@ -273,7 +277,7 @@ export default async function AccountPage({ searchParams }: { searchParams?: Pro
         <SectionHeader
           icon={CreditCard}
           title="Paiements et revenus crédits"
-          description="Stripe Connect permet au modèle, y compris au propriétaire s’il diffuse aussi, de recevoir ses revenus avec commission plateforme."
+          description="Le revenu modèle est affiché net après commission PULSEROOM et frais Stripe disponibles."
         />
         {stripeNotice ? (
           <p
@@ -294,7 +298,8 @@ export default async function AccountPage({ searchParams }: { searchParams?: Pro
           {admin.role === 'OWNER' ? (
             <InfoItem label="Commission plateforme" value={formatEuros(monthlyPlatformFeeCents)} />
           ) : null}
-          <InfoItem label="Revenu modèle" value={formatEuros(monthlyModelRevenueCents)} />
+          <InfoItem label="Frais Stripe" value={formatEuros(monthlyStripeFeeCents)} />
+          <InfoItem label="Revenu modèle net" value={formatEuros(monthlyModelRevenueCents)} />
           <InfoItem label="Total payé membres" value={formatEuros(monthlyCreditSalesCents)} />
         </div>
         {user.role === 'MODEL' || user.role === 'OWNER' ? (
@@ -319,10 +324,12 @@ export default async function AccountPage({ searchParams }: { searchParams?: Pro
                     <p className="font-semibold text-neutral-100">Achat {formatEuros(purchase.amountCents)}</p>
                     {admin.role === 'OWNER' ? (
                       <p className="mt-0.5 text-xs text-neutral-500">
-                        Commission {formatEuros(purchase.platformFeeCents)} · Modèle {formatEuros(purchase.modelRevenueCents)}
+                        Commission {formatEuros(purchase.platformFeeCents)} · Frais Stripe {formatEuros(purchase.stripeFeeCents)} · Modèle net {formatEuros(purchase.modelRevenueCents)}
                       </p>
                     ) : (
-                      <p className="mt-0.5 text-xs text-neutral-500">Revenu modèle {formatEuros(purchase.modelRevenueCents)}</p>
+                      <p className="mt-0.5 text-xs text-neutral-500">
+                        Frais Stripe {formatEuros(purchase.stripeFeeCents)} · Revenu modèle net {formatEuros(purchase.modelRevenueCents)}
+                      </p>
                     )}
                   </div>
                 </div>

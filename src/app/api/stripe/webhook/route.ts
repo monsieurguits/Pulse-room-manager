@@ -46,7 +46,7 @@ async function handleCheckoutCompleted(stripe: Stripe, session: Stripe.Checkout.
   }
 
   if (session.metadata?.type !== 'member_credit_purchase') return;
-  await applyPaidMemberCreditPurchaseFromSession(session);
+  await applyPaidMemberCreditPurchaseFromSession(session, { stripe });
 }
 
 async function handleModelSubscriptionCheckout(stripe: Stripe, session: Stripe.Checkout.Session) {

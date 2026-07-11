@@ -152,6 +152,7 @@ model MemberCreditPurchase {
   amountCents Int
   currency String @default("eur")
   platformFeeCents Int @default(0)
+  stripeFeeCents Int @default(0)
   modelRevenueCents Int @default(0)
 
   stripeSessionId String? @unique
