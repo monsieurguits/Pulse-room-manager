@@ -18,19 +18,50 @@ function utokenFor(memberId: string): string {
   return crypto.createHash('md5').update(memberId + salt).digest('hex');
 }
 
+function clearOtherLovenseRuntimeState(ownerId: string | null, activeMemberId: string) {
+  if (!ownerId) {
+    return db.member.updateMany({ where: { id: { not: activeMemberId }, ownerId: null }, data: { connected: false } });
+  }
+
+  return db.member.updateMany({
+    where: {
+      ownerId,
+      id: { not: activeMemberId },
+      OR: [
+        { connected: true },
+        { deviceDomain: { not: null } },
+        { httpsPort: { not: null } },
+        { toysJson: { not: null } },
+      ],
+    },
+    data: {
+      connected: false,
+      deviceDomain: null,
+      httpsPort: null,
+      wsPort: null,
+      toyId: null,
+      toyName: null,
+      toyType: null,
+      toysJson: null,
+      battery: null,
+    },
+  });
+}
+
 /** Génère le QR code d'appairage pour un membre donné. */
 export async function generateQRCode(memberId: string, options: { forceRefresh?: boolean } = {}) {
   const member = await db.member.findUniqueOrThrow({
-  where: { id: memberId },
-  select: {
-    id: true,
-    username: true,
-    lovenseUserId: true,
-    qrImageUrl: true,
-    deviceDomain: true,
-    httpsPort: true,
-  },
-});
+    where: { id: memberId },
+    select: {
+      id: true,
+      ownerId: true,
+      username: true,
+      lovenseUserId: true,
+      qrImageUrl: true,
+      deviceDomain: true,
+      httpsPort: true,
+    },
+  });
 
   // Si un QR existe déjà et que le callback a déjà fourni le domaine, on le réutilise.
   // Sinon on régénère un QR pour forcer Lovense à utiliser la callback actuelle.
@@ -58,19 +89,27 @@ export async function generateQRCode(memberId: string, options: { forceRefresh?:
 
   const nextAccessCode = options.forceRefresh ? await createUniqueMemberAccessCode() : undefined;
 
-  await db.member.update({
-    where: { id: memberId },
-    data: {
-      lovenseUserId: member.id,
-      lovensePairingCode: response.data.code,
-      ...(nextAccessCode ? { accessCode: nextAccessCode } : {}),
-      qrImageUrl: response.data.qr,
-      deviceDomain: null,
-      httpsPort: null,
-      wsPort: null,
-      connected: false,
-    },
-  });
+  await db.$transaction([
+    clearOtherLovenseRuntimeState(member.ownerId, member.id),
+    db.member.update({
+      where: { id: memberId },
+      data: {
+        lovenseUserId: member.id,
+        lovensePairingCode: response.data.code,
+        ...(nextAccessCode ? { accessCode: nextAccessCode } : {}),
+        qrImageUrl: response.data.qr,
+        deviceDomain: null,
+        httpsPort: null,
+        wsPort: null,
+        connected: false,
+        toyId: null,
+        toyName: null,
+        toyType: null,
+        toysJson: null,
+        battery: null,
+      },
+    }),
+  ]);
 
   return response;
 }
@@ -121,22 +160,25 @@ export async function handleCallback(payload: LovenseCallbackPayload): Promise<v
     wssPort: payload.wssPort,
   });
 
-  const updated = await db.member.update({
-    where: { id: member.id },
-    data: {
-      deviceDomain: payload.domain ?? member.deviceDomain,
-      httpsPort: toOptionalNumber(payload.httpsPort) ?? member.httpsPort,
-      wsPort: toOptionalNumber(payload.wsPort ?? payload.wssPort) ?? member.wsPort,
+  const [_, updated] = await db.$transaction([
+    clearOtherLovenseRuntimeState(member.ownerId, member.id),
+    db.member.update({
+      where: { id: member.id },
+      data: {
+        deviceDomain: payload.domain ?? member.deviceDomain,
+        httpsPort: toOptionalNumber(payload.httpsPort) ?? member.httpsPort,
+        wsPort: toOptionalNumber(payload.wsPort ?? payload.wssPort) ?? member.wsPort,
 
-      connected: hasToySnapshot ? normalizedToys.some((toy) => toy.status === 1) : member.connected,
+        connected: hasToySnapshot ? normalizedToys.some((toy) => toy.status === 1) : member.connected,
 
-      toyId: primaryToy?.id ?? member.toyId,
-      toyName: primaryToy?.nickName || primaryToy?.name || member.toyName,
-      toyType: primaryToy?.name ?? member.toyType,
-      battery: primaryToy?.battery ?? member.battery,
-      toysJson: hasToySnapshot ? JSON.stringify(normalizedToys) : member.toysJson,
-    },
-  });
+        toyId: primaryToy?.id ?? member.toyId,
+        toyName: primaryToy?.nickName || primaryToy?.name || member.toyName,
+        toyType: primaryToy?.name ?? member.toyType,
+        battery: primaryToy?.battery ?? member.battery,
+        toysJson: hasToySnapshot ? JSON.stringify(normalizedToys) : member.toysJson,
+      },
+    }),
+  ]);
 
   console.log("💾 Données enregistrées :", {
     deviceDomain: updated.deviceDomain,

@@ -204,8 +204,8 @@ export function ControlPanel({
           return;
         }
 
-        await post('/api/control/start');
-        await sendIntensityCommand(intensity);
+        await post('/api/control/start', { initialLevel: intensity });
+        lastSentIntensity.current = intensity;
         await realtime.refresh();
       } catch (error) {
         toast.error((error as Error).message);
