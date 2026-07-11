@@ -5,6 +5,23 @@ import { getCreditPack } from '@/lib/credit-packs';
 import { db } from '@/lib/db';
 import { getAppUrl, getPlatformCommissionRate, getStripe } from '@/lib/stripe';
 
+function getStripeCheckoutErrorDetail(error: unknown): string {
+  if (!error || typeof error !== 'object') return 'unknown';
+
+  const stripeError = error as {
+    code?: unknown;
+    message?: unknown;
+    type?: unknown;
+    raw?: { code?: unknown; message?: unknown; type?: unknown };
+  };
+  const code = stripeError.code ?? stripeError.raw?.code ?? stripeError.type ?? stripeError.raw?.type ?? 'stripe_error';
+  const message = stripeError.message ?? stripeError.raw?.message;
+  const safeCode = String(code).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 80);
+
+  if (typeof message !== 'string' || message.length === 0) return safeCode;
+  return `${safeCode}: ${message}`.replace(/[\r\n]+/g, ' ').slice(0, 240);
+}
+
 export async function createMemberCreditCheckoutSession(formData: FormData): Promise<void> {
   const secureToken = String(formData.get('secureToken') ?? '');
   const packId = String(formData.get('packId') ?? '');
@@ -49,7 +66,11 @@ export async function createMemberCreditCheckoutSession(formData: FormData): Pro
     },
   });
 
-  const session = await stripe.checkout.sessions.create({
+  let stripeSessionId: string;
+  let stripeSessionUrl: string | null;
+
+  try {
+    const session = await stripe.checkout.sessions.create({
     mode: 'payment',
     line_items: [
       {
@@ -82,16 +103,29 @@ export async function createMemberCreditCheckoutSession(formData: FormData): Pro
       : undefined,
     success_url: `${appUrl}/control/${secureToken}/credits/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl}/control/${secureToken}/credits?payment=cancelled`,
-  });
+    });
+
+    stripeSessionId = session.id;
+    stripeSessionUrl = session.url;
+  } catch (error) {
+    console.error('Stripe credit checkout failed', error);
+    await db.memberCreditPurchase
+      .update({
+        where: { id: purchase.id },
+        data: { status: 'failed' },
+      })
+      .catch(() => null);
+    redirect(`/control/${secureToken}/credits?error=stripe_checkout&stripe_error=${encodeURIComponent(getStripeCheckoutErrorDetail(error))}`);
+  }
 
   await db.memberCreditPurchase.update({
     where: { id: purchase.id },
-    data: { stripeSessionId: session.id },
+    data: { stripeSessionId },
   });
 
-  if (!session.url) {
+  if (!stripeSessionUrl) {
     redirect(`/control/${secureToken}/credits?error=stripe_session`);
   }
 
-  redirect(session.url);
+  redirect(stripeSessionUrl);
 }

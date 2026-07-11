@@ -7,7 +7,19 @@ export function getAppUrl(): string {
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') ||
     'https://pulse-room.app';
 
-  return raw.replace(/\/$/, '');
+  const value = raw.trim().replace(/\/$/, '');
+  const withProtocol = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+
+  try {
+    const url = new URL(withProtocol);
+    const isLocal = ['localhost', '127.0.0.1', '::1'].includes(url.hostname);
+    if (!isLocal && url.protocol === 'http:') {
+      url.protocol = 'https:';
+    }
+    return url.toString().replace(/\/$/, '');
+  } catch {
+    return 'https://pulse-room.app';
+  }
 }
 
 export function getStripe(): Stripe | null {

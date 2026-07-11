@@ -17,7 +17,7 @@ export default async function MemberCreditsPage({
   searchParams,
 }: {
   params: Promise<{ secureToken: string }>;
-  searchParams: Promise<{ payment?: string; error?: string }>;
+  searchParams: Promise<{ payment?: string; error?: string; stripe_error?: string }>;
 }) {
   const { secureToken } = await params;
   const query = await searchParams;
@@ -68,7 +68,9 @@ export default async function MemberCreditsPage({
           <p className="rounded-2xl border border-red-500/25 bg-red-500/10 p-4 text-sm text-red-200">
             {query.error === 'stripe_connect_required'
               ? 'Le modèle doit finaliser son compte Stripe avant de pouvoir recevoir des achats de crédits.'
-              : 'Paiement indisponible pour le moment. Réessayez dans quelques instants.'}
+              : query.stripe_error
+                ? `Paiement indisponible : ${query.stripe_error}`
+                : 'Paiement indisponible pour le moment. Réessayez dans quelques instants.'}
           </p>
         ) : null}
 
