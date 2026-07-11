@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { requireAdmin } from '@/lib/auth';
-import { createStripeConnectUrl, getStripeErrorCode } from '@/lib/stripe-connect-link';
+import { createStripeConnectUrl, getStripeErrorDetail } from '@/lib/stripe-connect-link';
 
 export async function createStripeConnectAccountLink(): Promise<void> {
   const admin = await requireAdmin();
@@ -15,7 +15,7 @@ export async function createStripeConnectAccountLink(): Promise<void> {
     if (error instanceof Error && error.message === 'stripe_missing') {
       redirect('/dashboard/account?stripe=missing');
     }
-    redirect(`/dashboard/account?stripe=connect_error&stripe_error=${getStripeErrorCode(error)}`);
+    redirect(`/dashboard/account?stripe=connect_error&stripe_error=${encodeURIComponent(getStripeErrorDetail(error))}`);
   }
 
   redirect(accountLinkUrl);
