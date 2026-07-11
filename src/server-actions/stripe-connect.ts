@@ -56,13 +56,21 @@ export async function createStripeConnectAccountLink(): Promise<void> {
     }
 
     const appUrl = getAppUrl();
-    const accountLink = await stripe.accountLinks.create({
-      account: accountId,
-      type: 'account_onboarding',
-      refresh_url: `${appUrl}/dashboard/account?stripe=refresh`,
-      return_url: `${appUrl}/dashboard/account?stripe=connected`,
-    });
-    accountLinkUrl = accountLink.url;
+    const account = await stripe.accounts.retrieve(accountId);
+    const onboardingComplete = Boolean(account.details_submitted);
+
+    if (onboardingComplete) {
+      const loginLink = await stripe.accounts.createLoginLink(accountId);
+      accountLinkUrl = loginLink.url;
+    } else {
+      const accountLink = await stripe.accountLinks.create({
+        account: accountId,
+        type: 'account_onboarding',
+        refresh_url: `${appUrl}/dashboard/account?stripe=refresh`,
+        return_url: `${appUrl}/dashboard/account?stripe=connected`,
+      });
+      accountLinkUrl = accountLink.url;
+    }
   } catch (error) {
     console.error('Stripe Connect onboarding failed', error);
     redirect(`/dashboard/account?stripe=connect_error&stripe_error=${getStripeErrorCode(error)}`);
