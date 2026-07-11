@@ -3,8 +3,9 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import type { AdminUser } from '@prisma/client';
 import { db } from '@/lib/db';
+import { getCurrentLegalTermsVersion } from '@/lib/legal-content';
 
-export const LEGAL_TERMS_VERSION = '2026-07-07';
+export const LEGAL_TERMS_VERSION = getCurrentLegalTermsVersion();
 
 export type CurrentAdmin = Pick<
   AdminUser,

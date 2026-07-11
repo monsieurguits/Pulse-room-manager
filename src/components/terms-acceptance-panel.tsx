@@ -5,15 +5,27 @@ import { useRouter } from 'next/navigation';
 import { AlertTriangle, LockKeyhole, ShieldCheck, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { MemberTierBadge } from '@/components/member-tier-badge';
+import type { WeeklyLegalUpdate } from '@/lib/legal-content';
 
 interface Props {
   secureToken: string;
   username: string;
   platform: string;
   weeklyCredit: number;
+  isUpdate?: boolean;
+  legalVersion?: string;
+  weeklyUpdate?: WeeklyLegalUpdate | null;
 }
 
-export function TermsAcceptancePanel({ secureToken, username, platform, weeklyCredit }: Props) {
+export function TermsAcceptancePanel({
+  secureToken,
+  username,
+  platform,
+  weeklyCredit,
+  isUpdate = false,
+  legalVersion,
+  weeklyUpdate,
+}: Props) {
   const router = useRouter();
   const [accepted, setAccepted] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -52,7 +64,9 @@ export function TermsAcceptancePanel({ secureToken, username, platform, weeklyCr
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
         <section className="overflow-hidden rounded-[28px] border border-base-700 bg-base-900 shadow-2xl">
           <div className="border-t-4 border-accent-500 p-6 sm:p-8">
-            <p className="text-xs font-semibold uppercase text-neutral-500">Première connexion</p>
+            <p className="text-xs font-semibold uppercase text-neutral-500">
+              {isUpdate ? 'Mise à jour obligatoire' : 'Première connexion'}
+            </p>
             <div className="mt-3 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <h1 className="truncate text-4xl font-black text-neutral-50 sm:text-5xl">{username}</h1>
@@ -65,11 +79,29 @@ export function TermsAcceptancePanel({ secureToken, username, platform, weeklyCr
 
         <form onSubmit={handleSubmit} className="rounded-[28px] border border-base-700 bg-base-900 p-5 shadow-2xl sm:p-7">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-neutral-50">Conditions de sécurité, confidentialité et jeu</h2>
+            <h2 className="text-2xl font-bold text-neutral-50">
+              {isUpdate ? 'Nouveautés et conditions mises à jour' : 'Conditions de sécurité, confidentialité et jeu'}
+            </h2>
             <p className="mt-2 text-sm leading-6 text-neutral-400">
-              Avant d&apos;accéder à votre espace membre, merci de lire et d&apos;accepter les règles ci-dessous.
+              {isUpdate
+                ? 'Avant de continuer vers votre espace membre, merci de lire les nouveautés de la semaine et d’accepter la version mise à jour.'
+                : 'Avant d’accéder à votre espace membre, merci de lire et d’accepter les règles ci-dessous.'}
             </p>
+            {legalVersion ? <p className="mt-2 text-xs text-neutral-500">Version des conditions : {legalVersion}</p> : null}
           </div>
+
+          {weeklyUpdate ? (
+            <section className="mb-5 rounded-2xl border border-accent-400/25 bg-accent-500/10 p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent-300">Nouveautés de la semaine</p>
+              <h3 className="mt-2 text-lg font-bold text-neutral-50">{weeklyUpdate.title}</h3>
+              <p className="mt-2 text-sm leading-6 text-neutral-300">{weeklyUpdate.summary}</p>
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm leading-6 text-neutral-300">
+                {weeklyUpdate.changes.map((change) => (
+                  <li key={change}>{change}</li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
           <div className="grid gap-4 md:grid-cols-3">
             <TermsCard
@@ -98,6 +130,10 @@ export function TermsAcceptancePanel({ secureToken, username, platform, weeklyCr
             </div>
           </div>
 
+          <a href="/conditions-generales-pulseroom.pdf" target="_blank" rel="noreferrer" className="btn-secondary mt-5 w-full justify-center">
+            Lire le PDF complet des conditions générales
+          </a>
+
           <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-2xl border border-base-800 bg-base-950/70 p-4">
             <input
               type="checkbox"
@@ -107,7 +143,7 @@ export function TermsAcceptancePanel({ secureToken, username, platform, weeklyCr
               required
             />
             <span className="text-sm leading-6 text-neutral-300">
-              Je confirme avoir lu et compris les conditions de sécurité, de confidentialité et de jeu. J&apos;accepte d&apos;utiliser ce service de manière responsable, respectueuse et sécurisée.
+              Je confirme avoir lu et compris les conditions de sécurité, de confidentialité, de jeu et les nouveautés applicables. J&apos;accepte d&apos;utiliser ce service de manière responsable, respectueuse et sécurisée.
             </span>
           </label>
 

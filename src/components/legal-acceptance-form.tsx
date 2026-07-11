@@ -9,10 +9,12 @@ export function LegalAcceptanceForm({
   action,
   plan,
   trial,
+  isUpdate = false,
 }: {
   action: (prev: LegalAcceptanceState, formData: FormData) => Promise<LegalAcceptanceState>;
   plan?: string;
   trial?: string;
+  isUpdate?: boolean;
 }) {
   const [checked, setChecked] = useState(false);
   const [state, formAction, isPending] = useActionState(action, initialState);
@@ -21,7 +23,9 @@ export function LegalAcceptanceForm({
     <aside className="h-fit rounded-2xl border border-white/10 bg-base-900/80 p-5 shadow-xl shadow-black/30 backdrop-blur-xl lg:sticky lg:top-8">
       <h2 className="text-lg font-bold text-neutral-50">Validation obligatoire</h2>
       <p className="mt-2 text-sm leading-6 text-neutral-400">
-        Cette acceptation est nécessaire pour activer l&apos;accès à votre espace modèle.
+        {isUpdate
+          ? 'Cette acceptation est nécessaire pour continuer à accéder à votre espace modèle.'
+          : 'Cette acceptation est nécessaire pour activer l’accès à votre espace modèle.'}
       </p>
 
       <form action={formAction} className="mt-5 flex flex-col gap-4">
@@ -39,7 +43,8 @@ export function LegalAcceptanceForm({
           <span className="text-sm leading-6 text-neutral-300">
             En créant un compte et en utilisant PULSEROOM, vous reconnaissez avoir lu et accepté les Conditions
             Générales d&apos;Utilisation ainsi que la Politique de confidentialité. Vous confirmez également être
-            majeur(e) et autorisé(e) à utiliser les services proposés.
+            majeur(e) et autorisé(e) à utiliser les services proposés. Vous confirmez avoir pris connaissance des
+            nouveautés applicables lorsqu’une mise à jour est présentée.
           </span>
         </label>
 
@@ -48,7 +53,7 @@ export function LegalAcceptanceForm({
         )}
 
         <button type="submit" disabled={!checked || isPending} className="btn-accent min-h-12">
-          {isPending ? 'Validation...' : 'J’accepte et j’accède à mon espace'}
+          {isPending ? 'Validation...' : isUpdate ? 'J’accepte les mises à jour' : 'J’accepte et j’accède à mon espace'}
         </button>
       </form>
     </aside>

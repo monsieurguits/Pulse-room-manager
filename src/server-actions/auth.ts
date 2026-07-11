@@ -94,7 +94,7 @@ export async function loginAdmin(_prev: LoginFormState, formData: FormData): Pro
 
   await createAdminSession(user.id);
   if (user.role === 'MODEL' && user.legalAcceptedVersion !== LEGAL_TERMS_VERSION) {
-    redirect('/subscription');
+    redirect(user.subscriptionPlan ? '/legal/accept' : '/subscription');
   }
 
   redirect('/dashboard');
@@ -223,17 +223,23 @@ export async function acceptLegalTerms(_prev: LegalAcceptanceState, formData: Fo
     return { error: 'Vous devez cocher la case pour continuer.' };
   }
 
-  const subscriptionStartedAt = new Date();
+  const acceptedAt = new Date();
+  const subscriptionStartedAt = acceptedAt;
   const subscriptionPlan = isTrial ? 'trial' : allowedSubscriptionPlans.has(selectedPlan) ? selectedPlan : 'trial';
+  const isFirstAcceptance = !admin.legalAcceptedAt;
 
   await db.adminUser.update({
     where: { id: admin.id },
     data: {
-      legalAcceptedAt: new Date(),
+      legalAcceptedAt: acceptedAt,
       legalAcceptedVersion: LEGAL_TERMS_VERSION,
-      subscriptionPlan,
-      subscriptionStartedAt,
-      subscriptionEndsAt: addOneMonth(subscriptionStartedAt),
+      ...(isFirstAcceptance
+        ? {
+            subscriptionPlan,
+            subscriptionStartedAt,
+            subscriptionEndsAt: addOneMonth(subscriptionStartedAt),
+          }
+        : {}),
     },
   });
 

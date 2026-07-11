@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
+import { LEGAL_TERMS_VERSION } from '@/lib/auth';
 
 const bodySchema = z.object({
   secureToken: z.string().min(1),
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
 
     await db.member.update({
       where: { id: member.id },
-      data: { termsAcceptedAt: new Date() },
+      data: { termsAcceptedAt: new Date(), termsAcceptedVersion: LEGAL_TERMS_VERSION },
     });
 
     return NextResponse.json({ ok: true });

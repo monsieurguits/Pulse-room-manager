@@ -4,6 +4,8 @@ import { ControlPanel } from '@/components/control-panel';
 import { TermsAcceptancePanel } from '@/components/terms-acceptance-panel';
 import { getEffectiveLovenseStatus, getToys } from '@/lib/lovense/service';
 import { getDashboardWeather } from '@/lib/weather';
+import { LEGAL_TERMS_VERSION } from '@/lib/auth';
+import { getCurrentWeeklyLegalUpdate } from '@/lib/legal-content';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,13 +19,17 @@ export default async function ControlPage({ params }: { params: Promise<{ secure
 
   if (!member) notFound();
 
-  if (!member.termsAcceptedAt) {
+  if (!member.termsAcceptedAt || member.termsAcceptedVersion !== LEGAL_TERMS_VERSION) {
+    const weeklyUpdate = getCurrentWeeklyLegalUpdate();
     return (
       <TermsAcceptancePanel
         secureToken={secureToken}
         username={member.username}
         platform={member.platform}
         weeklyCredit={member.weeklyCredit}
+        isUpdate={Boolean(member.termsAcceptedAt)}
+        legalVersion={LEGAL_TERMS_VERSION}
+        weeklyUpdate={weeklyUpdate}
       />
     );
   }

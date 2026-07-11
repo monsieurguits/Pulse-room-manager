@@ -43,6 +43,7 @@ model Member {
 
   // Acceptation obligatoire des conditions avant le premier accès au contrôle
   termsAcceptedAt DateTime?
+  termsAcceptedVersion String?
 
   // Intégration Lovense (Standard API / Standard Socket API)
   lovenseUserId String? // identifiant utilisateur Lovense (uid) retourné par l'API
