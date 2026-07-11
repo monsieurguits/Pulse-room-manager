@@ -46,18 +46,24 @@ export default async function MessagesPage() {
   const internalUnreadGroups = await groupUnreadAdminDirectMessages(admin.id);
   const unreadByContact = new Map(internalUnreadGroups.map((item) => [item.senderAdminId, item._count._all]));
 
-  const conversations = members.map((member) => ({
-    id: member.id,
-    username: member.username,
-    platform: member.platform,
-    unreadCount: unreadByMember.get(member.id) ?? 0,
-    lastMessage: member.directMessages[0]
-      ? {
-          ...member.directMessages[0],
-          createdAt: member.directMessages[0].createdAt.toISOString(),
-        }
-      : null,
-  }));
+  const conversations = members
+    .map((member) => ({
+      id: member.id,
+      username: member.username,
+      platform: member.platform,
+      unreadCount: unreadByMember.get(member.id) ?? 0,
+      lastMessage: member.directMessages[0]
+        ? {
+            ...member.directMessages[0],
+            createdAt: member.directMessages[0].createdAt.toISOString(),
+          }
+        : null,
+    }))
+    .sort((a, b) => {
+      const bTime = b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : 0;
+      const aTime = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : 0;
+      return bTime - aTime;
+    });
   const quickContacts =
     admin.role === 'OWNER'
       ? modelContacts.map((model) => ({

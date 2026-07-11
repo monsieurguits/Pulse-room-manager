@@ -18,6 +18,7 @@ export function MemberMessageWidget({ secureToken, modelName }: { secureToken: s
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const sendingRef = useRef(false);
   const unreadCount = open ? 0 : messages.filter((message) => message.sender === 'model' && !message.readByMemberAt).length;
   const displayedMessages = useMemo(() => [...messages].reverse(), [messages]);
 
@@ -27,7 +28,11 @@ export function MemberMessageWidget({ secureToken, modelName }: { secureToken: s
     const response = await fetch(`/api/messages/member?${params.toString()}`, { cache: 'no-store' });
     if (!response.ok) return;
     const payload = (await response.json()) as { messages?: DirectMessage[] };
-    setMessages(payload.messages ?? []);
+    setMessages((current) => {
+      const optimisticMessages = current.filter((message) => message.id.startsWith('optimistic-'));
+      const nextMessages = payload.messages ?? [];
+      return sendingRef.current ? [...nextMessages, ...optimisticMessages] : nextMessages;
+    });
   }
 
   useEffect(() => {
@@ -57,6 +62,7 @@ export function MemberMessageWidget({ secureToken, modelName }: { secureToken: s
     setMessages((current) => [...current, optimisticMessage]);
     setBody('');
     setSending(true);
+    sendingRef.current = true;
 
     try {
       const response = await fetch('/api/messages/member', {
@@ -66,13 +72,18 @@ export function MemberMessageWidget({ secureToken, modelName }: { secureToken: s
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? 'Message non envoyé.');
-      setMessages((current) => current.map((message) => (message.id === optimisticMessage.id ? payload.message : message)));
+      setMessages((current) =>
+        current.some((message) => message.id === optimisticMessage.id)
+          ? current.map((message) => (message.id === optimisticMessage.id ? payload.message : message))
+          : [...current, payload.message],
+      );
     } catch (error) {
       setMessages((current) => current.filter((message) => message.id !== optimisticMessage.id));
       setBody(content);
       toast.error((error as Error).message);
     } finally {
       setSending(false);
+      sendingRef.current = false;
     }
   }
 

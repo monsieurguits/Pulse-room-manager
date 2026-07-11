@@ -65,6 +65,8 @@ export function AdminMessagesPanel({
   const [sending, setSending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const requestSeqRef = useRef(0);
+  const sendingRef = useRef(false);
+  const selectedTargetRef = useRef<SelectedTarget | null>(firstTarget);
 
   const selectedMember = useMemo(
     () => (selectedTarget?.kind === 'member' ? conversations.find((conversation) => conversation.id === selectedTarget.id) ?? null : null),
@@ -113,7 +115,11 @@ export function AdminMessagesPanel({
       if (!response.ok) return;
       const payload = (await response.json()) as { messages?: Array<Omit<MemberMessage, 'kind'> | Omit<InternalMessage, 'kind'>> };
       if (requestSeqRef.current !== requestSeq) return;
-      setMessages((payload.messages ?? []).map((message) => ({ ...message, kind: target.kind })) as ChatMessage[]);
+      setMessages((current) => {
+        const optimisticMessages = current.filter((message) => message.id.startsWith('optimistic-'));
+        const nextMessages = (payload.messages ?? []).map((message) => ({ ...message, kind: target.kind })) as ChatMessage[];
+        return sendingRef.current ? [...nextMessages, ...optimisticMessages] : nextMessages;
+      });
       void refreshConversations();
       void refreshInternalUnread();
     } finally {
@@ -122,6 +128,7 @@ export function AdminMessagesPanel({
   }
 
   useEffect(() => {
+    selectedTargetRef.current = selectedTarget;
     setMessages([]);
     void refreshMessages(selectedTarget, { showLoading: true });
   }, [selectedTarget]);
@@ -144,42 +151,48 @@ export function AdminMessagesPanel({
     event.preventDefault();
     const content = body.trim();
     if (!selectedTarget || !content) return;
+    const target = selectedTarget;
 
     const createdAt = new Date().toISOString();
     const optimisticMessage: ChatMessage =
-      selectedTarget.kind === 'member'
+      target.kind === 'member'
         ? { kind: 'member', id: `optimistic-${Date.now()}`, sender: 'model', body: content, createdAt }
         : {
             kind: 'internal',
             id: `optimistic-${Date.now()}`,
             senderAdminId: currentAdminId,
-            recipientAdminId: selectedTarget.id,
+            recipientAdminId: target.id,
             body: content,
             createdAt,
           };
 
     setMessages((current) => [...current, optimisticMessage]);
-    if (selectedTarget.kind === 'member') {
+    if (target.kind === 'member') {
       setConversations((current) =>
         current.map((conversation) =>
-          conversation.id === selectedTarget.id ? { ...conversation, lastMessage: { body: content, sender: 'model', createdAt } } : conversation,
+          conversation.id === target.id ? { ...conversation, lastMessage: { body: content, sender: 'model', createdAt } } : conversation,
         ),
       );
     }
     setBody('');
     setSending(true);
+    sendingRef.current = true;
 
     try {
-      const response = await fetch(selectedTarget.kind === 'member' ? '/api/messages/admin' : '/api/messages/internal', {
+      const response = await fetch(target.kind === 'member' ? '/api/messages/admin' : '/api/messages/internal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(selectedTarget.kind === 'member' ? { memberId: selectedTarget.id, body: content } : { contactId: selectedTarget.id, body: content }),
+        body: JSON.stringify(target.kind === 'member' ? { memberId: target.id, body: content } : { contactId: target.id, body: content }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? 'Message non envoyé.');
-      setMessages((current) =>
-        current.map((message) => (message.id === optimisticMessage.id ? ({ ...payload.message, kind: selectedTarget.kind } as ChatMessage) : message)),
-      );
+      if (selectedTargetRef.current?.kind === target.kind && selectedTargetRef.current.id === target.id) {
+        setMessages((current) =>
+          current.some((message) => message.id === optimisticMessage.id)
+            ? current.map((message) => (message.id === optimisticMessage.id ? ({ ...payload.message, kind: target.kind } as ChatMessage) : message))
+            : [...current, { ...payload.message, kind: target.kind } as ChatMessage],
+        );
+      }
       void refreshConversations();
       void refreshInternalUnread();
     } catch (error) {
@@ -188,6 +201,7 @@ export function AdminMessagesPanel({
       toast.error((error as Error).message);
     } finally {
       setSending(false);
+      sendingRef.current = false;
     }
   }
 

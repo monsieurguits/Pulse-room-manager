@@ -64,15 +64,21 @@ export async function GET(request: NextRequest) {
   });
   const unreadByMember = new Map(unreadGroups.map((item) => [item.memberId, item._count._all]));
 
-  return NextResponse.json({
-    conversations: members.map((member) => ({
+  const conversations = members
+    .map((member) => ({
       id: member.id,
       username: member.username,
       platform: member.platform,
       unreadCount: unreadByMember.get(member.id) ?? 0,
       lastMessage: member.directMessages[0] ?? null,
-    })),
-  });
+    }))
+    .sort((a, b) => {
+      const bTime = b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : 0;
+      const aTime = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : 0;
+      return bTime - aTime;
+    });
+
+  return NextResponse.json({ conversations });
 }
 
 export async function POST(request: NextRequest) {
