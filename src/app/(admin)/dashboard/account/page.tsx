@@ -63,7 +63,7 @@ function addOneMonth(date: Date | null | undefined) {
   return next;
 }
 
-function getStripeNotice(stripeStatus: string | undefined) {
+function getStripeNotice(stripeStatus: string | undefined, stripeError: string | undefined) {
   switch (stripeStatus) {
     case 'missing':
       return {
@@ -73,7 +73,7 @@ function getStripeNotice(stripeStatus: string | undefined) {
     case 'connect_error':
       return {
         tone: 'error',
-        text: 'Stripe Connect n’a pas pu générer le lien. Vérifiez que Connect est activé dans Stripe et que la clé STRIPE_SECRET_KEY correspond au bon mode test/live.',
+        text: `Stripe Connect n’a pas pu générer le lien. Vérifiez que Connect est activé dans Stripe et que la clé STRIPE_SECRET_KEY correspond au bon mode test/live.${stripeError ? ` Détail Stripe : ${stripeError}.` : ''}`,
       };
     case 'refresh':
       return {
@@ -90,10 +90,10 @@ function getStripeNotice(stripeStatus: string | undefined) {
   }
 }
 
-export default async function AccountPage({ searchParams }: { searchParams?: Promise<{ stripe?: string }> }) {
+export default async function AccountPage({ searchParams }: { searchParams?: Promise<{ stripe?: string; stripe_error?: string }> }) {
   const admin = await requireAdmin();
   const params = await searchParams;
-  const stripeNotice = getStripeNotice(params?.stripe);
+  const stripeNotice = getStripeNotice(params?.stripe, params?.stripe_error);
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);

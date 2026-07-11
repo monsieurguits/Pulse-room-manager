@@ -5,6 +5,18 @@ import { requireAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { getAppUrl, getStripe } from '@/lib/stripe';
 
+function getStripeErrorCode(error: unknown): string {
+  if (error && typeof error === 'object') {
+    const maybeStripeError = error as { code?: unknown; type?: unknown; raw?: { code?: unknown; type?: unknown } };
+    const code = maybeStripeError.code ?? maybeStripeError.raw?.code ?? maybeStripeError.type ?? maybeStripeError.raw?.type;
+    if (typeof code === 'string' && code.length > 0) {
+      return code.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 80);
+    }
+  }
+
+  return 'unknown';
+}
+
 export async function createStripeConnectAccountLink(): Promise<void> {
   const admin = await requireAdmin();
   const stripe = getStripe();
@@ -53,7 +65,7 @@ export async function createStripeConnectAccountLink(): Promise<void> {
     accountLinkUrl = accountLink.url;
   } catch (error) {
     console.error('Stripe Connect onboarding failed', error);
-    redirect('/dashboard/account?stripe=connect_error');
+    redirect(`/dashboard/account?stripe=connect_error&stripe_error=${getStripeErrorCode(error)}`);
   }
 
   redirect(accountLinkUrl);
