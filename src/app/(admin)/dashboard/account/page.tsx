@@ -104,6 +104,7 @@ export default async function AccountPage({ searchParams }: { searchParams?: Pro
     activeAdminSessions,
     openControlSessions,
     monthlyCreditRevenue,
+    monthlyOwnModelCreditRevenue,
     recentCreditPurchases,
   ] = await Promise.all([
     db.adminUser.findUnique({ where: { id: admin.id } }),
@@ -118,6 +119,14 @@ export default async function AccountPage({ searchParams }: { searchParams?: Pro
         paidAt: { gte: monthStart },
       },
       _sum: { modelRevenueCents: true, amountCents: true, platformFeeCents: true },
+    }),
+    db.memberCreditPurchase.aggregate({
+      where: {
+        ownerId: admin.id,
+        status: 'paid',
+        paidAt: { gte: monthStart },
+      },
+      _sum: { modelRevenueCents: true, amountCents: true },
     }),
     db.memberCreditPurchase.findMany({
       where: {
@@ -137,10 +146,16 @@ export default async function AccountPage({ searchParams }: { searchParams?: Pro
   const displayedSubscriptionPlan = user.subscriptionPlan ?? (user.legalAcceptedAt ? 'trial' : null);
   const displayedSubscriptionStart = user.subscriptionStartedAt ?? user.legalAcceptedAt;
   const displayedSubscriptionEnd = user.subscriptionEndsAt ?? addOneMonth(user.legalAcceptedAt);
+  const monthlyPlatformFeeCents = monthlyCreditRevenue._sum.platformFeeCents ?? 0;
+  const monthlyModelRevenueCents =
+    admin.role === 'OWNER'
+      ? monthlyOwnModelCreditRevenue._sum.modelRevenueCents ?? 0
+      : monthlyCreditRevenue._sum.modelRevenueCents ?? 0;
+  const monthlyCreditSalesCents = monthlyCreditRevenue._sum.amountCents ?? 0;
   const creditRevenueCents =
     admin.role === 'OWNER'
-      ? monthlyCreditRevenue._sum.platformFeeCents ?? 0
-      : monthlyCreditRevenue._sum.modelRevenueCents ?? 0;
+      ? monthlyPlatformFeeCents + monthlyModelRevenueCents
+      : monthlyModelRevenueCents;
   const stripeConnectOnboardingComplete =
     (user.role === 'MODEL' || user.role === 'OWNER') && user.stripeConnectAccountId
       ? await syncStripeConnectAccountStatus(user.id, user.stripeConnectAccountId).catch(
@@ -273,10 +288,14 @@ export default async function AccountPage({ searchParams }: { searchParams?: Pro
             {stripeNotice.text}
           </p>
         ) : null}
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <InfoItem label="Compte Stripe" value={user.stripeConnectAccountId ? 'Connecté' : 'Non connecté'} />
           <InfoItem label="Validation Stripe" value={stripeConnectOnboardingComplete ? 'Terminée' : 'À finaliser'} />
-          <InfoItem label="Revenu du mois" value={formatEuros(creditRevenueCents)} />
+          {admin.role === 'OWNER' ? (
+            <InfoItem label="Commission plateforme" value={formatEuros(monthlyPlatformFeeCents)} />
+          ) : null}
+          <InfoItem label="Revenu modèle" value={formatEuros(monthlyModelRevenueCents)} />
+          <InfoItem label="Total payé membres" value={formatEuros(monthlyCreditSalesCents)} />
         </div>
         {user.role === 'MODEL' || user.role === 'OWNER' ? (
           <form action="/api/stripe/connect" method="get" className="mt-5">
@@ -297,10 +316,14 @@ export default async function AccountPage({ searchParams }: { searchParams?: Pro
                     <p className="mt-0.5 text-xs text-neutral-500">{purchase.label}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-neutral-100">
-                      {formatEuros(admin.role === 'OWNER' ? purchase.platformFeeCents : purchase.modelRevenueCents)}
-                    </p>
-                    <p className="mt-0.5 text-xs text-neutral-500">Achat {formatEuros(purchase.amountCents)}</p>
+                    <p className="font-semibold text-neutral-100">Achat {formatEuros(purchase.amountCents)}</p>
+                    {admin.role === 'OWNER' ? (
+                      <p className="mt-0.5 text-xs text-neutral-500">
+                        Commission {formatEuros(purchase.platformFeeCents)} · Modèle {formatEuros(purchase.modelRevenueCents)}
+                      </p>
+                    ) : (
+                      <p className="mt-0.5 text-xs text-neutral-500">Revenu modèle {formatEuros(purchase.modelRevenueCents)}</p>
+                    )}
                   </div>
                 </div>
               ))}
