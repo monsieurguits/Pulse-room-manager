@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { after, NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { startSession, stopSession } from '@/lib/session-engine';
 import { broadcast } from '@/lib/websocket/publisher';
@@ -28,16 +28,21 @@ export async function POST(request: NextRequest) {
 
     const session = await startSession(memberId, parsed.data.controlClientId);
     broadcast({ type: 'session-started', memberId, sessionId: session.id, controlClientId: session.controlClientId });
-    const initialResult = typeof parsed.data.initialLevel === 'number'
-      ? await vibrate(memberId, parsed.data.initialLevel, 0, parsed.data.toyId)
-      : null;
 
-    if (initialResult?.ok === false) {
-      await stopSession(memberId, 'manual').catch(() => undefined);
-      return NextResponse.json({ error: initialResult.message ?? 'Commande Lovense refusée.' }, { status: 502 });
+    if (typeof parsed.data.initialLevel === 'number') {
+      after(async () => {
+        const result = await vibrate(memberId, parsed.data.initialLevel!, 0, parsed.data.toyId).catch((error) => ({
+          ok: false,
+          message: (error as Error).message,
+        }));
+
+        if (!result.ok) {
+          await stopSession(memberId, 'manual').catch(() => undefined);
+        }
+      });
     }
 
-    return NextResponse.json({ session, initialResult }, { status: 201 });
+    return NextResponse.json({ session }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 409 });
   }

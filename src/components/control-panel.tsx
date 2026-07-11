@@ -204,10 +204,12 @@ export function ControlPanel({
           return;
         }
 
+        realtime.startOptimistically();
         await post('/api/control/start', { initialLevel: intensity });
         lastSentIntensity.current = intensity;
         await realtime.refresh();
       } catch (error) {
+        realtime.stopOptimistically();
         toast.error((error as Error).message);
       }
     });
@@ -548,7 +550,7 @@ export function ControlPanel({
                     Démarrer
                   </button>
                 ) : hasControl ? (
-                  <button onClick={handleStop} disabled={isPending} className="btn-secondary col-span-2 min-h-12 hover:border-red-500 hover:text-red-400">
+                  <button onClick={handleStop} disabled={!controlClientId} className="btn-secondary col-span-2 min-h-12 hover:border-red-500 hover:text-red-400">
                     <Square size={18} />
                     Arrêter
                   </button>

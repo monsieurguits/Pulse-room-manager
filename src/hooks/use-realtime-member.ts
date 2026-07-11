@@ -155,5 +155,15 @@ export function useRealtimeMember(memberId: string, secureToken: string, initial
     }));
   }, []);
 
-  return { ...state, refresh: refreshOwnership, stopOptimistically };
+  const startOptimistically = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      isControlling: true,
+      canControl: true,
+      isWaiting: false,
+      elapsedSeconds: 0,
+    }));
+  }, []);
+
+  return { ...state, refresh: refreshOwnership, startOptimistically, stopOptimistically };
 }

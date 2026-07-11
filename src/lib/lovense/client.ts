@@ -151,28 +151,44 @@ export async function sendCommand(options: SendCommandOptions): Promise<LovenseC
   if (options.strength) body.strength = options.strength;
 
   const directEndpoint = `https://${options.domain}:${options.httpsPort}/command`;
-  const endpoints = process.env.VERCEL
-    ? [LOVENSE_CLOUD_COMMAND_ENDPOINT]
-    : [directEndpoint, LOVENSE_CLOUD_COMMAND_ENDPOINT];
+  return sendToFastestLovenseEndpoint([
+    { endpoint: directEndpoint, timeoutMs: 1200 },
+    { endpoint: LOVENSE_CLOUD_COMMAND_ENDPOINT, timeoutMs: 3500 },
+  ], body);
+}
 
-  let res: Response | null = null;
-  let lastError: unknown = null;
+async function sendToFastestLovenseEndpoint(
+  endpoints: Array<{ endpoint: string; timeoutMs: number }>,
+  body: Record<string, unknown>,
+): Promise<LovenseCommandResult> {
+  const controllers = endpoints.map(() => new AbortController());
+  const errors: unknown[] = [];
 
-  for (const endpoint of endpoints) {
-    const timeoutMs = endpoint === directEndpoint ? 700 : 4000;
-    res = await postCommand(endpoint, body, timeoutMs).catch((error) => {
-      lastError = error;
-      return null;
-    });
-    if (res) break;
+  const requests = endpoints.map(({ endpoint, timeoutMs }, index) =>
+    postCommand(endpoint, body, timeoutMs, controllers[index]!.signal)
+      .then((response) => normalizeCommandResponse(response))
+      .then((result) => {
+        if (!result.ok) throw result;
+        controllers.forEach((controller, controllerIndex) => {
+          if (controllerIndex !== index) controller.abort();
+        });
+        return result;
+      })
+      .catch((error) => {
+        if ((error as Error)?.name !== 'AbortError') errors.push(error);
+        throw error;
+      }),
+  );
+
+  try {
+    return await Promise.any(requests);
+  } catch {
+    const usefulError = errors.find((error) => typeof error === 'object' && error && 'message' in error) as { message?: string } | undefined;
+    throw new Error(`Impossible de joindre Lovense depuis le serveur (${usefulError?.message || 'fetch failed'}).`);
   }
+}
 
-  if (!res) {
-    throw new Error(
-      `Impossible de joindre Lovense depuis le serveur (${(lastError as Error | null)?.message || 'fetch failed'}).`
-    );
-  }
-
+async function normalizeCommandResponse(res: Response): Promise<LovenseCommandResult> {
   if (!res.ok) {
     return { ok: false, code: res.status, message: `Erreur HTTP ${res.status}` };
   }
@@ -186,12 +202,15 @@ export async function sendCommand(options: SendCommandOptions): Promise<LovenseC
   };
 }
 
-function postCommand(endpoint: string, body: Record<string, unknown>, timeoutMs: number) {
+function postCommand(endpoint: string, body: Record<string, unknown>, timeoutMs: number, signal?: AbortSignal) {
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  const combinedSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
+
   return fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
     cache: 'no-store',
-    signal: AbortSignal.timeout(timeoutMs),
+    signal: combinedSignal,
   });
 }
