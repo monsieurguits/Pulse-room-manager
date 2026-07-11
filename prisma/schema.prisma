@@ -62,6 +62,8 @@ model Member {
   overlayEvents ControlOverlayEvent[]
   creditPurchases MemberCreditPurchase[]
   directMessages DirectMessage[]
+  sentMemberMessages MemberDirectMessage[] @relation("MemberPeerMessageSender")
+  receivedMemberMessages MemberDirectMessage[] @relation("MemberPeerMessageRecipient")
 
   createdAt DateTime @updatedAt @default(now())
   updatedAt DateTime @updatedAt
@@ -107,6 +109,7 @@ model AdminUser {
   overlayEvents ControlOverlayEvent[]
   creditPurchases MemberCreditPurchase[]
   directMessages DirectMessage[]
+  memberPeerMessages MemberDirectMessage[]
   sentAdminMessages AdminDirectMessage[] @relation("AdminMessageSender")
   receivedAdminMessages AdminDirectMessage[] @relation("AdminMessageRecipient")
 
@@ -181,6 +184,27 @@ model DirectMessage {
   @@index([memberId, createdAt])
   @@index([ownerId, readByModelAt])
   @@index([memberId, readByMemberAt])
+}
+
+model MemberDirectMessage {
+  id String @id @default(cuid())
+
+  ownerId String?
+  owner AdminUser? @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  senderMemberId String
+  senderMember Member @relation("MemberPeerMessageSender", fields: [senderMemberId], references: [id], onDelete: Cascade)
+
+  recipientMemberId String
+  recipientMember Member @relation("MemberPeerMessageRecipient", fields: [recipientMemberId], references: [id], onDelete: Cascade)
+
+  body String
+  readByRecipientAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([ownerId, createdAt])
+  @@index([senderMemberId, recipientMemberId, createdAt])
+  @@index([recipientMemberId, readByRecipientAt])
 }
 
 model AdminSession {

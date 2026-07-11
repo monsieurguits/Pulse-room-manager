@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { Headset, MessageCircle, Send, UserRound } from 'lucide-react';
+import { Headset, MessageCircle, Send, ShieldAlert, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Conversation = {
@@ -287,6 +287,15 @@ export function AdminMessagesPanel({
             <p className="text-sm font-semibold text-neutral-100">{selectedTitle}</p>
             <p className="text-xs text-neutral-500">{selectedSubtitle}</p>
           </header>
+
+          <div className="border-b border-base-800 bg-base-950/80 px-4 py-3">
+            <div className="flex gap-2 rounded-2xl border border-cyan-300/15 bg-cyan-300/10 p-3 text-[11px] leading-5 text-cyan-50/85">
+              <ShieldAlert size={16} className="mt-0.5 shrink-0 text-cyan-200" />
+              <p>
+                Par sécurité, ne communiquez jamais d’informations personnelles, bancaires ou privées. PULSEROOM facilite les échanges mais ne peut être tenu responsable des informations partagées entre utilisateurs.
+              </p>
+            </div>
+          </div>
 
           <form onSubmit={submit} className="sticky top-0 z-10 border-b border-base-800 bg-base-900 p-3 shadow-lg shadow-black/10">
             <div className="flex gap-2">
