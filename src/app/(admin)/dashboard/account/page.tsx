@@ -21,7 +21,6 @@ import { LEGAL_TERMS_VERSION, memberOwnerWhere, requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db';
 import { syncStripeConnectAccountStatus } from '@/lib/stripe-connect-status';
 import { logoutAllAdminSessions } from '@/server-actions/auth';
-import { createStripeConnectAccountLink } from '@/server-actions/stripe-connect';
 
 export const dynamic = 'force-dynamic';
 
@@ -143,7 +142,7 @@ export default async function AccountPage({ searchParams }: { searchParams?: Pro
       ? monthlyCreditRevenue._sum.platformFeeCents ?? 0
       : monthlyCreditRevenue._sum.modelRevenueCents ?? 0;
   const stripeConnectOnboardingComplete =
-    user.role === 'MODEL' && user.stripeConnectAccountId
+    (user.role === 'MODEL' || user.role === 'OWNER') && user.stripeConnectAccountId
       ? await syncStripeConnectAccountStatus(user.id, user.stripeConnectAccountId).catch(
           () => user.stripeConnectOnboardingComplete,
         )
@@ -280,7 +279,7 @@ export default async function AccountPage({ searchParams }: { searchParams?: Pro
           <InfoItem label="Revenu du mois" value={formatEuros(creditRevenueCents)} />
         </div>
         {user.role === 'MODEL' || user.role === 'OWNER' ? (
-          <form action={createStripeConnectAccountLink} className="mt-5">
+          <form action="/api/stripe/connect" method="get" className="mt-5">
             <button type="submit" className="btn-accent w-full justify-center sm:w-auto">
               <CreditCard size={17} />
               {user.stripeConnectAccountId ? 'Gérer mon compte Stripe' : 'Connecter Stripe'}
