@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (event.type === 'checkout.session.completed') {
-    await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+    await handleCheckoutCompleted(stripe, event.data.object as Stripe.Checkout.Session);
   }
 
   if (event.type === 'account.updated') {
@@ -38,7 +38,12 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ received: true });
 }
 
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+async function handleCheckoutCompleted(stripe: Stripe, session: Stripe.Checkout.Session) {
+  if (session.mode === 'subscription') {
+    await handleModelSubscriptionCheckout(stripe, session);
+    return;
+  }
+
   if (session.metadata?.type !== 'member_credit_purchase') return;
 
   const purchaseId = session.metadata.purchaseId;
@@ -63,6 +68,33 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       },
     }),
   ]);
+}
+
+async function handleModelSubscriptionCheckout(stripe: Stripe, session: Stripe.Checkout.Session) {
+  const adminId = session.metadata?.adminId;
+  const plan = session.metadata?.plan;
+
+  if (!adminId || !plan || !['starter', 'pro', 'premium'].includes(plan) || session.payment_status !== 'paid') return;
+
+  const subscription = typeof session.subscription === 'string'
+    ? await stripe.subscriptions.retrieve(session.subscription)
+    : session.subscription;
+  const subscriptionPeriod = subscription as { current_period_start?: number; current_period_end?: number } | null;
+  const periodStart = typeof subscriptionPeriod?.current_period_start === 'number'
+    ? new Date(subscriptionPeriod.current_period_start * 1000)
+    : new Date();
+  const periodEnd = typeof subscriptionPeriod?.current_period_end === 'number'
+    ? new Date(subscriptionPeriod.current_period_end * 1000)
+    : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  await db.adminUser.updateMany({
+    where: { id: adminId, role: 'MODEL' },
+    data: {
+      subscriptionPlan: plan,
+      subscriptionStartedAt: periodStart,
+      subscriptionEndsAt: periodEnd,
+    },
+  });
 }
 
 async function handleAccountUpdated(account: Stripe.Account) {

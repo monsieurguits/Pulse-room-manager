@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/weekly-credit-reset",
+      "schedule": "*/15 * * * *"
+    }
+  ]
+}

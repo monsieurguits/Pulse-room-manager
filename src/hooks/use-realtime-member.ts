@@ -20,7 +20,7 @@ export interface RealtimeMemberState {
  * Le chronomètre reste synchronisé avec le serveur (jamais un setInterval
  * client livré à lui-même) : chaque tick reçu écrase la valeur locale.
  */
-export function useRealtimeMember(memberId: string, initial: RealtimeMemberState, controlClientId: string | null) {
+export function useRealtimeMember(memberId: string, secureToken: string, initial: RealtimeMemberState, controlClientId: string | null) {
   const [state, setState] = useState<RealtimeMemberState>(initial);
   const [reconnectAttempt, setReconnectAttempt] = useState(0);
   const socketRef = useRef<WebSocket | null>(null);
@@ -28,7 +28,7 @@ export function useRealtimeMember(memberId: string, initial: RealtimeMemberState
   const refreshOwnership = useCallback(async () => {
     if (!controlClientId) return;
 
-    const params = new URLSearchParams({ memberId, controlClientId });
+    const params = new URLSearchParams({ token: secureToken, controlClientId });
     const response = await fetch(`/api/control/status?${params.toString()}`, { cache: 'no-store' });
     if (!response.ok) return;
 
@@ -43,7 +43,7 @@ export function useRealtimeMember(memberId: string, initial: RealtimeMemberState
       connected: payload.connected as boolean,
       battery: payload.battery as number | null,
     }));
-  }, [memberId, controlClientId]);
+  }, [secureToken, controlClientId]);
 
   useEffect(() => {
     const configuredWsPort = process.env.NEXT_PUBLIC_WS_PORT;

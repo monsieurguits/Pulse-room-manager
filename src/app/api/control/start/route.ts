@@ -2,12 +2,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { startSession } from '@/lib/session-engine';
 import { broadcast } from '@/lib/websocket/publisher';
-import { resolveMemberId } from '@/lib/member-access';
+import { resolvePublicMemberId } from '@/lib/member-access';
 import { getEffectiveLovenseStatus } from '@/lib/lovense/service';
 
 const bodySchema = z.object({
-  memberId: z.string().min(1).optional(),
-  secureToken: z.string().min(1).optional(),
+  secureToken: z.string().min(1),
   controlClientId: z.string().min(1),
 });
 
@@ -18,7 +17,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const memberId = await resolveMemberId(parsed.data);
+    const memberId = await resolvePublicMemberId(parsed.data);
     const deviceStatus = await getEffectiveLovenseStatus(memberId);
 
     if (!deviceStatus.connected) {

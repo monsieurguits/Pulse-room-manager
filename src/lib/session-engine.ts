@@ -34,14 +34,6 @@ export async function startSession(memberId: string, controlClientId?: string) {
 
   if (activeSession) {
     const ownsActiveSession = activeSession.memberId === memberId && activeSession.controlClientId === controlClientId;
-    const canClaimOwnSession = activeSession.memberId === memberId && controlClientId;
-
-    if (canClaimOwnSession && !ownsActiveSession) {
-      return db.session.update({
-        where: { id: activeSession.id },
-        data: { controlClientId },
-      });
-    }
 
     if (ownsActiveSession) return activeSession;
     throw new Error("Vous êtes sur la liste d'attente. Une autre personne contrôle actuellement ce Lovense.");
@@ -120,10 +112,6 @@ export async function assertSessionController(memberId: string, controlClientId?
   });
 
   if (!session) throw new Error('Aucune session de contrôle active.');
-  if (controlClientId && session.memberId === memberId && session.controlClientId !== controlClientId) {
-    await db.session.update({ where: { id: session.id }, data: { controlClientId } });
-    return;
-  }
 
   if (!controlClientId || session.controlClientId !== controlClientId) {
     throw new Error("Vous êtes sur la liste d'attente. Une autre personne contrôle actuellement ce Lovense.");

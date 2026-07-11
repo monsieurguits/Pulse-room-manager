@@ -1,21 +1,24 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { syncActiveSessions } from '@/lib/session-engine';
+import { resetWeeklyCreditsIfDue, syncActiveSessions } from '@/lib/session-engine';
 import { getEffectiveLovenseStatus } from '@/lib/lovense/service';
+import { resolvePublicMemberId } from '@/lib/member-access';
 
 export async function GET(request: NextRequest) {
+  await resetWeeklyCreditsIfDue().catch(() => 0);
   await syncActiveSessions();
 
-  const memberId = request.nextUrl.searchParams.get('memberId');
   const secureToken = request.nextUrl.searchParams.get('token');
   const controlClientId = request.nextUrl.searchParams.get('controlClientId');
 
-  if (!memberId && !secureToken) {
-    return NextResponse.json({ error: 'memberId ou token requis.' }, { status: 400 });
+  if (!secureToken) {
+    return NextResponse.json({ error: 'Token requis.' }, { status: 400 });
   }
 
+  const memberId = await resolvePublicMemberId({ secureToken });
+
   const member = await db.member.findUnique({
-    where: memberId ? { id: memberId } : { secureToken: secureToken! },
+    where: { id: memberId },
     include: {
       sessions: { where: { active: true }, orderBy: { startedAt: 'desc' }, take: 1 },
     },
@@ -29,18 +32,6 @@ export async function GET(request: NextRequest) {
     where: { active: true },
     orderBy: { startedAt: 'desc' },
   });
-
-  if (
-    activeSession &&
-    activeSession.memberId === member.id &&
-    controlClientId &&
-    activeSession.controlClientId !== controlClientId
-  ) {
-    activeSession = await db.session.update({
-      where: { id: activeSession.id },
-      data: { controlClientId },
-    });
-  }
 
   const canControl = Boolean(
     activeSession &&

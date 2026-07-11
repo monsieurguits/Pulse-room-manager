@@ -163,6 +163,8 @@ async function deleteMemberRecords(memberIds: string[]): Promise<number> {
   if (ids.length === 0) return 0;
 
   const result = await db.$transaction(async (tx) => {
+    await tx.directMessage.deleteMany({ where: { memberId: { in: ids } } });
+    await tx.memberCreditPurchase.deleteMany({ where: { memberId: { in: ids } } });
     await tx.tipCommand.deleteMany({ where: { memberId: { in: ids } } });
     await tx.controlOverlayEvent.deleteMany({ where: { memberId: { in: ids } } });
     await tx.session.deleteMany({ where: { memberId: { in: ids } } });

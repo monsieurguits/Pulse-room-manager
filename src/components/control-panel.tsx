@@ -103,7 +103,7 @@ export function ControlPanel({
   initial,
 }: Props) {
   const [controlClientId, setControlClientId] = useState<string | null>(null);
-  const realtime = useRealtimeMember(memberId, initial, controlClientId);
+  const realtime = useRealtimeMember(memberId, secureToken, initial, controlClientId);
   const [isPending, startTransition] = useTransition();
   const [intensity, setIntensity] = useState(10);
   const [activePattern, setActivePattern] = useState<PatternPreview | null>(null);

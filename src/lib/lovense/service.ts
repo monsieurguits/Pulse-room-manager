@@ -230,7 +230,7 @@ async function findEffectiveLovenseStatusSource(member: Member): Promise<Member 
 
   return db.member.findFirst({
     where: {
-      ownerId: member.ownerId,
+      ...(member.ownerId ? { ownerId: member.ownerId } : { id: member.id }),
       connected: true,
       lovenseUserId: { not: null },
       deviceDomain: { not: null },
@@ -303,13 +303,15 @@ async function findPreferredLovenseTarget(
   member: Member,
   toyId?: string
 ): Promise<LovenseTarget | null> {
+  const minFreshUpdatedAt = await getLovenseFreshnessDate();
   const candidates = await db.member.findMany({
     where: {
-      ownerId: member.ownerId,
+      ...(member.ownerId ? { ownerId: member.ownerId } : { id: member.id }),
       connected: true,
       lovenseUserId: { not: null },
       deviceDomain: { not: null },
       httpsPort: { not: null },
+      updatedAt: { gte: minFreshUpdatedAt },
     },
     orderBy: { updatedAt: 'desc' },
     take: 10,
@@ -362,6 +364,8 @@ function isLovenseAppOffline(result: LovenseCommandResult): boolean {
 }
 
 async function findFallbackLovenseTarget(currentTarget: LovenseTarget, toyId?: string): Promise<LovenseTarget | null> {
+  if (!currentTarget.ownerId) return null;
+  const minFreshUpdatedAt = await getLovenseFreshnessDate();
   const candidates = await db.member.findMany({
     where: {
       ownerId: currentTarget.ownerId,
@@ -369,6 +373,7 @@ async function findFallbackLovenseTarget(currentTarget: LovenseTarget, toyId?: s
       lovenseUserId: { not: null },
       deviceDomain: { not: null },
       httpsPort: { not: null },
+      updatedAt: { gte: minFreshUpdatedAt },
       NOT: { lovenseUserId: currentTarget.uid },
     },
     orderBy: { updatedAt: 'desc' },

@@ -151,6 +151,11 @@ export async function deleteModelAdmin(modelId: string): Promise<void> {
       where: { ownerId: modelId },
       data: { ownerId: owner.id },
     }),
+    db.adminDirectMessage.deleteMany({
+      where: {
+        OR: [{ senderAdminId: modelId }, { recipientAdminId: modelId }],
+      },
+    }),
     db.adminSession.deleteMany({ where: { userId: modelId } }),
     db.adminUser.delete({ where: { id: modelId } }),
   ]);
