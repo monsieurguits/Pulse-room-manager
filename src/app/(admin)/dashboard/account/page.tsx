@@ -259,7 +259,7 @@ export default async function AccountPage({ searchParams }: { searchParams?: Pro
         <SectionHeader
           icon={CreditCard}
           title="Paiements et revenus crédits"
-          description="Stripe Connect permet au modèle de recevoir ses revenus avec commission plateforme."
+          description="Stripe Connect permet au modèle, y compris au propriétaire s’il diffuse aussi, de recevoir ses revenus avec commission plateforme."
         />
         {stripeNotice ? (
           <p
@@ -279,7 +279,7 @@ export default async function AccountPage({ searchParams }: { searchParams?: Pro
           <InfoItem label="Validation Stripe" value={stripeConnectOnboardingComplete ? 'Terminée' : 'À finaliser'} />
           <InfoItem label="Revenu du mois" value={formatEuros(creditRevenueCents)} />
         </div>
-        {user.role === 'MODEL' ? (
+        {user.role === 'MODEL' || user.role === 'OWNER' ? (
           <form action={createStripeConnectAccountLink} className="mt-5">
             <button type="submit" className="btn-accent w-full justify-center sm:w-auto">
               <CreditCard size={17} />
