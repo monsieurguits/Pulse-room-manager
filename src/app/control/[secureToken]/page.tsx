@@ -67,6 +67,9 @@ export default async function ControlPage({ params }: { params: Promise<{ secure
       currentMonthStartDate={currentMonthStart.toISOString()}
       currentMonthEndDate={currentMonthEnd.toISOString()}
       modelName={member.owner?.name ?? 'le modèle'}
+      legalAcceptedAt={member.termsAcceptedAt?.toISOString() ?? null}
+      legalAcceptedVersion={member.termsAcceptedVersion}
+      legalTermsVersion={LEGAL_TERMS_VERSION}
       memberWeather={weather ? { modelName: member.owner?.name ?? 'le modèle', temperature: weather.temperature } : null}
       initial={{
         remainingCredit: member.remainingCredit,

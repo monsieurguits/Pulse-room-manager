@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import {
   Activity,
+  BookOpen,
+  CheckCircle2,
   Clock3,
   Gauge,
   Play,
@@ -82,6 +84,9 @@ interface Props {
   currentMonthStartDate: string;
   currentMonthEndDate: string;
   modelName: string;
+  legalAcceptedAt: string | null;
+  legalAcceptedVersion: string | null;
+  legalTermsVersion: string;
   memberWeather?: { modelName: string; temperature: number } | null;
   initial: RealtimeMemberState & { weeklyCredit: number };
 }
@@ -99,6 +104,9 @@ export function ControlPanel({
   currentMonthStartDate,
   currentMonthEndDate,
   modelName,
+  legalAcceptedAt,
+  legalAcceptedVersion,
+  legalTermsVersion,
   memberWeather,
   initial,
 }: Props) {
@@ -336,6 +344,11 @@ export function ControlPanel({
   const memberSinceLabel = formatDisplayDate(memberSince);
   const subscriptionPeriodLabel = `${formatDisplayDate(subscriptionStartDate)} - ${formatDisplayDate(subscriptionEndDate)}`;
   const currentMonthPeriodLabel = `${formatDisplayDate(currentMonthStartDate)} - ${formatDisplayDate(currentMonthEndDate)}`;
+  const legalAccepted = Boolean(legalAcceptedAt && legalAcceptedVersion === legalTermsVersion);
+  const legalStatusLabel = legalAccepted ? 'Acceptées' : legalAcceptedAt ? 'À relire' : 'Non acceptées';
+  const legalStatusDetail = legalAcceptedAt
+    ? `Version ${legalAcceptedVersion ?? 'non disponible'} acceptée le ${formatDisplayDate(legalAcceptedAt)}`
+    : 'Lecture et acceptation obligatoires avant le contrôle.';
   const memberWeatherMessage = memberWeather
     ? getMemberWeatherMessage({ pseudo: username, modelName: memberWeather.modelName, temperature: memberWeather.temperature })
     : null;
@@ -374,14 +387,33 @@ export function ControlPanel({
                 value={deviceLabel}
                 className={deviceClassName}
               />
+              <StatusPill
+                icon={<CheckCircle2 size={16} />}
+                label="CGU / RGPD"
+                value={legalStatusLabel}
+                className={
+                  legalAccepted
+                    ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300 sm:col-span-2 lg:col-span-1'
+                    : 'border-amber-500/25 bg-amber-500/10 text-amber-200 sm:col-span-2 lg:col-span-1'
+                }
+              />
+              <Link
+                href="/legal"
+                className="btn-secondary min-h-12 justify-center sm:col-span-2 lg:col-span-1"
+                title={legalStatusDetail}
+              >
+                <BookOpen size={17} />
+                Relire les conditions
+              </Link>
             </div>
           </div>
         </section>
 
-        <section className="grid gap-3 md:grid-cols-3">
+        <section className="grid gap-3 md:grid-cols-4">
           <InfoTile label="Membre depuis" value={memberSinceLabel} />
           <InfoTile label="Abonnement" value={subscriptionPeriodLabel} />
           <InfoTile label="Mois en cours" value={currentMonthPeriodLabel} />
+          <InfoTile label="Statut CGU / RGPD" value={legalStatusDetail} />
         </section>
 
         <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
