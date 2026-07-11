@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { hashPassword, requireOwner } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { sendModelWelcomeEmail } from '@/lib/email';
+import { hasAdminDirectMessagesTable } from '@/lib/admin-direct-messages';
 
 const modelSchema = z.object({
   name: z.string().min(2, 'Nom requis.'),
@@ -146,19 +147,28 @@ export async function deleteModelAdmin(modelId: string): Promise<void> {
 
   if (!model || model.id === owner.id || !['MODEL', 'OWNER'].includes(model.role)) return;
 
-  await db.$transaction([
+  const operations = [
     db.member.updateMany({
       where: { ownerId: modelId },
       data: { ownerId: owner.id },
     }),
-    db.adminDirectMessage.deleteMany({
-      where: {
-        OR: [{ senderAdminId: modelId }, { recipientAdminId: modelId }],
-      },
-    }),
     db.adminSession.deleteMany({ where: { userId: modelId } }),
     db.adminUser.delete({ where: { id: modelId } }),
-  ]);
+  ];
+
+  if (await hasAdminDirectMessagesTable()) {
+    operations.splice(
+      1,
+      0,
+      db.adminDirectMessage.deleteMany({
+        where: {
+          OR: [{ senderAdminId: modelId }, { recipientAdminId: modelId }],
+        },
+      }),
+    );
+  }
+
+  await db.$transaction(operations);
 
   revalidatePath('/models');
   revalidatePath('/members');

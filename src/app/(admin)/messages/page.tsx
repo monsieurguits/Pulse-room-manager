@@ -1,6 +1,7 @@
 import { AdminMessagesPanel } from '@/components/messages/admin-messages-panel';
 import { memberOwnerWhere, requireAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { groupUnreadAdminDirectMessages } from '@/lib/admin-direct-messages';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,13 +43,7 @@ export default async function MessagesPage() {
           select: { id: true, email: true },
         })
       : null;
-  const internalUnreadGroups = await db.adminDirectMessage
-    .groupBy({
-      by: ['senderAdminId'],
-      where: { recipientAdminId: admin.id, readByRecipientAt: null },
-      _count: { _all: true },
-    })
-    .catch(() => []);
+  const internalUnreadGroups = await groupUnreadAdminDirectMessages(admin.id);
   const unreadByContact = new Map(internalUnreadGroups.map((item) => [item.senderAdminId, item._count._all]));
 
   const conversations = members.map((member) => ({

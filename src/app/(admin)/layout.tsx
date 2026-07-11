@@ -8,6 +8,7 @@ import { MaintenanceNotice } from '@/components/maintenance-notice';
 import { db } from '@/lib/db';
 import { memberOwnerWhere } from '@/lib/auth';
 import { MessagesNavLink } from '@/components/messages/messages-nav-link';
+import { countUnreadAdminDirectMessages } from '@/lib/admin-direct-messages';
 
 const NAV = [
   { href: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
@@ -29,11 +30,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const unreadMessages = await db.directMessage.count({
     where: { member: memberOwnerWhere(admin), sender: 'member', readByModelAt: null },
   });
-  const unreadInternalMessages = await db.adminDirectMessage
-    .count({
-      where: { recipientAdminId: admin.id, readByRecipientAt: null },
-    })
-    .catch(() => 0);
+  const unreadInternalMessages = await countUnreadAdminDirectMessages(admin.id);
   const unreadTotal = unreadMessages + unreadInternalMessages;
 
   return (
