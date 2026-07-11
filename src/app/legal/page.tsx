@@ -15,9 +15,6 @@ export default function LegalPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-accent-400">PULSEROOM</p>
           <h1 className="mt-2 text-3xl font-bold text-neutral-50">Documents légaux</h1>
           <p className="mt-2 text-sm text-neutral-400">Version des conditions : {LEGAL_TERMS_VERSION}</p>
-          <a href="/conditions-generales-pulseroom.pdf" target="_blank" rel="noreferrer" className="btn-secondary mt-4 inline-flex">
-            Télécharger le PDF complet
-          </a>
         </header>
 
         <div className="mt-6 space-y-6">

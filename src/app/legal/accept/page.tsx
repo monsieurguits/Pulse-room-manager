@@ -61,11 +61,8 @@ export default async function LegalAcceptPage({
             <div className="mb-4 flex flex-col gap-3 border-b border-white/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-xl font-bold text-neutral-50">Conditions générales complètes</h2>
-                <p className="mt-1 text-xs text-neutral-500">Le PDF complet reprend ces conditions et les anciennes clauses encore applicables.</p>
+                <p className="mt-1 text-xs text-neutral-500">Cette page reprend les conditions actuelles et les anciennes clauses encore applicables.</p>
               </div>
-              <a href="/conditions-generales-pulseroom.pdf" target="_blank" rel="noreferrer" className="btn-secondary justify-center">
-                Ouvrir le PDF
-              </a>
             </div>
             <div className="max-h-[68vh] space-y-8 overflow-y-auto pr-2">
               {LEGAL_SECTIONS.map((section) => (

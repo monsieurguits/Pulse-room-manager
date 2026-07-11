@@ -130,10 +130,6 @@ export function TermsAcceptancePanel({
             </div>
           </div>
 
-          <a href="/conditions-generales-pulseroom.pdf" target="_blank" rel="noreferrer" className="btn-secondary mt-5 w-full justify-center">
-            Lire le PDF complet des conditions générales
-          </a>
-
           <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-2xl border border-base-800 bg-base-950/70 p-4">
             <input
               type="checkbox"

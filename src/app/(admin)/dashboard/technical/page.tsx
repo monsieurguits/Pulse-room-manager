@@ -62,15 +62,11 @@ export default async function TechnicalPage() {
             <p className="mt-1 text-xs text-neutral-500">Version acceptée : {admin.legalAcceptedVersion ?? 'Non disponible'}</p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
             <Link href="/legal" className="btn-secondary justify-center">
               <BookOpen size={17} />
               Relire les conditions
             </Link>
-            <a href="/conditions-generales-pulseroom.pdf" className="btn-secondary justify-center" target="_blank" rel="noreferrer">
-              <FileText size={17} />
-              Conditions générales PDF
-            </a>
             <a href="/guide-modeles-pulseroom.pdf" className="btn-secondary justify-center" target="_blank" rel="noreferrer">
               <FileText size={17} />
               Guides modèles PDF
