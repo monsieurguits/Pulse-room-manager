@@ -19,6 +19,7 @@ import { WeatherCityForm } from '@/components/weather-city-form';
 import { formatEuros } from '@/lib/credit-packs';
 import { LEGAL_TERMS_VERSION, memberOwnerWhere, requireAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { syncStripeConnectAccountStatus } from '@/lib/stripe-connect-status';
 import { logoutAllAdminSessions } from '@/server-actions/auth';
 import { createStripeConnectAccountLink } from '@/server-actions/stripe-connect';
 
@@ -62,8 +63,37 @@ function addOneMonth(date: Date | null | undefined) {
   return next;
 }
 
-export default async function AccountPage() {
+function getStripeNotice(stripeStatus: string | undefined) {
+  switch (stripeStatus) {
+    case 'missing':
+      return {
+        tone: 'error',
+        text: 'Stripe n’est pas configuré. Ajoutez STRIPE_SECRET_KEY dans les variables Vercel puis redéployez.',
+      };
+    case 'connect_error':
+      return {
+        tone: 'error',
+        text: 'Stripe Connect n’a pas pu générer le lien. Vérifiez que Connect est activé dans Stripe et que la clé STRIPE_SECRET_KEY correspond au bon mode test/live.',
+      };
+    case 'refresh':
+      return {
+        tone: 'warning',
+        text: 'Le lien Stripe a expiré ou a déjà été utilisé. Cliquez à nouveau sur le bouton pour générer un nouveau lien sécurisé.',
+      };
+    case 'connected':
+      return {
+        tone: 'success',
+        text: 'Retour Stripe effectué. Si la validation indique encore “À finaliser”, terminez les informations demandées par Stripe.',
+      };
+    default:
+      return null;
+  }
+}
+
+export default async function AccountPage({ searchParams }: { searchParams?: Promise<{ stripe?: string }> }) {
   const admin = await requireAdmin();
+  const params = await searchParams;
+  const stripeNotice = getStripeNotice(params?.stripe);
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
@@ -112,6 +142,12 @@ export default async function AccountPage() {
     admin.role === 'OWNER'
       ? monthlyCreditRevenue._sum.platformFeeCents ?? 0
       : monthlyCreditRevenue._sum.modelRevenueCents ?? 0;
+  const stripeConnectOnboardingComplete =
+    user.role === 'MODEL' && user.stripeConnectAccountId
+      ? await syncStripeConnectAccountStatus(user.id, user.stripeConnectAccountId).catch(
+          () => user.stripeConnectOnboardingComplete,
+        )
+      : user.stripeConnectOnboardingComplete;
 
   return (
     <div className="flex flex-col gap-6">
@@ -225,9 +261,22 @@ export default async function AccountPage() {
           title="Paiements et revenus crédits"
           description="Stripe Connect permet au modèle de recevoir ses revenus avec commission plateforme."
         />
+        {stripeNotice ? (
+          <p
+            className={`mb-5 rounded-2xl border p-4 text-sm leading-6 ${
+              stripeNotice.tone === 'success'
+                ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-200'
+                : stripeNotice.tone === 'warning'
+                  ? 'border-amber-500/25 bg-amber-500/10 text-amber-200'
+                  : 'border-red-500/25 bg-red-500/10 text-red-200'
+            }`}
+          >
+            {stripeNotice.text}
+          </p>
+        ) : null}
         <div className="grid gap-4 sm:grid-cols-3">
           <InfoItem label="Compte Stripe" value={user.stripeConnectAccountId ? 'Connecté' : 'Non connecté'} />
-          <InfoItem label="Validation Stripe" value={user.stripeConnectOnboardingComplete ? 'Terminée' : 'À finaliser'} />
+          <InfoItem label="Validation Stripe" value={stripeConnectOnboardingComplete ? 'Terminée' : 'À finaliser'} />
           <InfoItem label="Revenu du mois" value={formatEuros(creditRevenueCents)} />
         </div>
         {user.role === 'MODEL' ? (

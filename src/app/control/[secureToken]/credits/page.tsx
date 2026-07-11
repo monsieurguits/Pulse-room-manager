@@ -25,7 +25,7 @@ export default async function MemberCreditsPage({
   const member = await db.member.findUnique({
     where: { secureToken },
     include: {
-      owner: { select: { name: true } },
+      owner: { select: { name: true, stripeConnectOnboardingComplete: true } },
       creditPurchases: {
         where: { status: 'paid' },
         orderBy: { paidAt: 'desc' },
@@ -35,6 +35,7 @@ export default async function MemberCreditsPage({
   });
 
   if (!member) notFound();
+  const stripeReady = Boolean(member.owner?.stripeConnectOnboardingComplete);
 
   return (
     <main className="min-h-screen bg-base-950 px-4 py-6 text-neutral-100 sm:px-6 lg:px-8 lg:py-10">
@@ -65,7 +66,15 @@ export default async function MemberCreditsPage({
 
         {query.error ? (
           <p className="rounded-2xl border border-red-500/25 bg-red-500/10 p-4 text-sm text-red-200">
-            Paiement indisponible pour le moment. Réessayez dans quelques instants.
+            {query.error === 'stripe_connect_required'
+              ? 'Le modèle doit finaliser son compte Stripe avant de pouvoir recevoir des achats de crédits.'
+              : 'Paiement indisponible pour le moment. Réessayez dans quelques instants.'}
+          </p>
+        ) : null}
+
+        {!stripeReady ? (
+          <p className="rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
+            Les achats de crédits seront disponibles dès que le modèle aura terminé la validation de son compte Stripe.
           </p>
         ) : null}
 
@@ -93,9 +102,13 @@ export default async function MemberCreditsPage({
               <h2 className="mt-5 text-2xl font-black text-neutral-50">{pack.label}</h2>
               <p className="mt-1 text-sm text-neutral-400">Crédit supplémentaire immédiat après paiement.</p>
               <p className="mt-5 text-3xl font-black text-neutral-50">{formatEuros(pack.amountCents)}</p>
-              <button type="submit" className={pack.popular ? 'btn-accent mt-5 w-full justify-center' : 'btn-secondary mt-5 w-full justify-center'}>
+              <button
+                type="submit"
+                disabled={!stripeReady}
+                className={pack.popular ? 'btn-accent mt-5 w-full justify-center disabled:cursor-not-allowed disabled:opacity-50' : 'btn-secondary mt-5 w-full justify-center disabled:cursor-not-allowed disabled:opacity-50'}
+              >
                 <CreditCard size={17} />
-                Acheter
+                {stripeReady ? 'Acheter' : 'Indisponible'}
               </button>
             </form>
           ))}

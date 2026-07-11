@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import Stripe from 'stripe';
 import { db } from '@/lib/db';
+import { applyPaidMemberCreditPurchaseFromSession } from '@/lib/member-credit-purchases';
 import { getStripe } from '@/lib/stripe';
 
 export const dynamic = 'force-dynamic';
@@ -45,29 +46,7 @@ async function handleCheckoutCompleted(stripe: Stripe, session: Stripe.Checkout.
   }
 
   if (session.metadata?.type !== 'member_credit_purchase') return;
-
-  const purchaseId = session.metadata.purchaseId;
-  if (!purchaseId || session.payment_status !== 'paid') return;
-
-  const purchase = await db.memberCreditPurchase.findUnique({ where: { id: purchaseId } });
-  if (!purchase || purchase.status === 'paid') return;
-
-  await db.$transaction([
-    db.member.update({
-      where: { id: purchase.memberId },
-      data: { remainingCredit: { increment: purchase.seconds } },
-    }),
-    db.memberCreditPurchase.update({
-      where: { id: purchase.id },
-      data: {
-        status: 'paid',
-        stripeSessionId: session.id,
-        stripePaymentIntentId:
-          typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id ?? null,
-        paidAt: new Date(),
-      },
-    }),
-  ]);
+  await applyPaidMemberCreditPurchaseFromSession(session);
 }
 
 async function handleModelSubscriptionCheckout(stripe: Stripe, session: Stripe.Checkout.Session) {

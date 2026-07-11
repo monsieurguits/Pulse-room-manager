@@ -19,35 +19,42 @@ export async function createStripeConnectAccountLink(): Promise<void> {
   }
 
   let accountId = user.stripeConnectAccountId;
+  let accountLinkUrl: string;
 
-  if (!accountId) {
-    const account = await stripe.accounts.create({
-      type: 'express',
-      country: 'FR',
-      email: user.email,
-      business_type: 'individual',
-      metadata: {
-        adminId: user.id,
-      },
-      capabilities: {
-        transfers: { requested: true },
-      },
-    });
-    accountId = account.id;
+  try {
+    if (!accountId) {
+      const account = await stripe.accounts.create({
+        type: 'express',
+        country: 'FR',
+        email: user.email,
+        business_type: 'individual',
+        metadata: {
+          adminId: user.id,
+        },
+        capabilities: {
+          transfers: { requested: true },
+        },
+      });
+      accountId = account.id;
 
-    await db.adminUser.update({
-      where: { id: user.id },
-      data: { stripeConnectAccountId: accountId, stripeConnectOnboardingComplete: false },
+      await db.adminUser.update({
+        where: { id: user.id },
+        data: { stripeConnectAccountId: accountId, stripeConnectOnboardingComplete: false },
+      });
+    }
+
+    const appUrl = getAppUrl();
+    const accountLink = await stripe.accountLinks.create({
+      account: accountId,
+      type: 'account_onboarding',
+      refresh_url: `${appUrl}/dashboard/account?stripe=refresh`,
+      return_url: `${appUrl}/dashboard/account?stripe=connected`,
     });
+    accountLinkUrl = accountLink.url;
+  } catch (error) {
+    console.error('Stripe Connect onboarding failed', error);
+    redirect('/dashboard/account?stripe=connect_error');
   }
 
-  const appUrl = getAppUrl();
-  const accountLink = await stripe.accountLinks.create({
-    account: accountId,
-    type: 'account_onboarding',
-    refresh_url: `${appUrl}/dashboard/account?stripe=refresh`,
-    return_url: `${appUrl}/dashboard/account?stripe=connected`,
-  });
-
-  redirect(accountLink.url);
+  redirect(accountLinkUrl);
 }

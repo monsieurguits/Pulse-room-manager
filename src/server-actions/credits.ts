@@ -27,7 +27,13 @@ export async function createMemberCreditCheckoutSession(formData: FormData): Pro
   const appUrl = getAppUrl();
   const platformFeeCents = Math.round(pack.amountCents * getPlatformCommissionRate());
   const modelRevenueCents = Math.max(0, pack.amountCents - platformFeeCents);
-  const ownerStripeAccountId = member.owner?.stripeConnectAccountId ?? null;
+  const ownerStripeAccountId = member.owner?.stripeConnectOnboardingComplete
+    ? member.owner.stripeConnectAccountId
+    : null;
+
+  if (!ownerStripeAccountId) {
+    redirect(`/control/${secureToken}/credits?error=stripe_connect_required`);
+  }
 
   const purchase = await db.memberCreditPurchase.create({
     data: {
