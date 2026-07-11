@@ -1,9 +1,9 @@
 import Link from 'next/link';
-import { Plus } from 'lucide-react';
+import { BookOpen, Plus } from 'lucide-react';
 import { db } from '@/lib/db';
 import { MembersTable } from '@/components/members-table';
 import { MembersFilters } from '@/components/members-filters';
-import { memberOwnerWhere, requireAdmin } from '@/lib/auth';
+import { LEGAL_TERMS_VERSION, memberOwnerWhere, requireAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,16 +51,22 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
           <h1 className="text-2xl font-bold text-neutral-50">Membres</h1>
           <p className="mt-1 text-sm text-neutral-400">{total} membre(s) au total.</p>
         </div>
-        <Link href="/members/new" className="btn-accent w-full sm:w-auto">
-          <Plus size={18} />
-          Nouveau membre
-        </Link>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <Link href="/legal" className="btn-secondary w-full justify-center sm:w-auto">
+            <BookOpen size={18} />
+            Relire les conditions générales
+          </Link>
+          <Link href="/members/new" className="btn-accent w-full sm:w-auto">
+            <Plus size={18} />
+            Nouveau membre
+          </Link>
+        </div>
       </div>
 
       <MembersFilters initial={{ q: params.q ?? '', status: params.status ?? 'all', sort, dir }} />
 
       <div className="card overflow-hidden">
-        <MembersTable members={members} />
+        <MembersTable members={members} legalTermsVersion={LEGAL_TERMS_VERSION} />
       </div>
 
       <div className="flex items-center justify-center gap-2">

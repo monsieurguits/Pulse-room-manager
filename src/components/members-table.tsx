@@ -5,14 +5,14 @@ import { useActionState, useEffect, useMemo, useRef, useState, useTransition } f
 import { useRouter } from 'next/navigation';
 import type { Member } from '@prisma/client';
 import { toast } from 'sonner';
-import { Ban, Copy, ExternalLink, Pencil, PlusCircle, QrCode, RotateCcw, Trash2, X } from 'lucide-react';
+import { Ban, CheckCircle2, Copy, ExternalLink, Pencil, PlusCircle, QrCode, RotateCcw, ShieldAlert, Trash2, X } from 'lucide-react';
 import { StatusBadge, deriveMemberStatus } from '@/components/status-badge';
 import { MemberTierBadge } from '@/components/member-tier-badge';
 import { buildMemberInviteMessage } from '@/lib/member-invite-message';
 import { formatDuration } from '@/lib/utils';
 import { addMemberCredit, deleteMembers, suspendMember, resetCredit, type AddMemberCreditState } from '@/server-actions/members';
 
-export function MembersTable({ members }: { members: Member[] }) {
+export function MembersTable({ members, legalTermsVersion }: { members: Member[]; legalTermsVersion: string }) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deleteRequest, setDeleteRequest] = useState<{ ids: string[]; label: string } | null>(null);
@@ -133,6 +133,10 @@ export function MembersTable({ members }: { members: Member[] }) {
                 </div>
                 <InfoLine label="Crédit" value={formatDuration(member.remainingCredit)} />
                 <InfoLine label="Code FanClub /join" value={member.accessCode ?? 'Non généré'} />
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-base-800 bg-base-950/60 px-3 py-2">
+                  <span>CGU / RGPD</span>
+                  <LegalStatusBadge member={member} legalTermsVersion={legalTermsVersion} />
+                </div>
                 <InfoLine label="Expiration" value={new Date(member.endDate).toLocaleDateString('fr-FR')} />
               </div>
               <MemberActions member={member} copyLink={copyLink} deleteOne={deleteOne} isPending={isPending} onChanged={() => router.refresh()} />
@@ -142,7 +146,7 @@ export function MembersTable({ members }: { members: Member[] }) {
       </div>
 
       <div className="hidden overflow-x-auto md:block">
-        <table className="min-w-[980px] w-full text-left text-sm">
+        <table className="min-w-[1080px] w-full text-left text-sm">
           <thead>
             <tr className="border-b border-base-800 bg-base-850/50 text-neutral-500">
               <th className="px-4 py-3 font-medium">
@@ -153,6 +157,7 @@ export function MembersTable({ members }: { members: Member[] }) {
               <th className="px-4 py-3 font-medium">Plateforme</th>
               <th className="px-4 py-3 font-medium">Statut</th>
               <th className="px-4 py-3 font-medium">Code FanClub</th>
+              <th className="px-4 py-3 font-medium">CGU / RGPD</th>
               <th className="px-4 py-3 font-medium">Crédit restant</th>
               <th className="px-4 py-3 font-medium">Expiration</th>
               <th className="px-4 py-3 font-medium text-right">Actions</th>
@@ -183,6 +188,9 @@ export function MembersTable({ members }: { members: Member[] }) {
                     <StatusBadge status={status} />
                   </td>
                   <td className="px-4 py-3 font-mono font-semibold text-accent-300">{member.accessCode ?? '-'}</td>
+                  <td className="px-4 py-3">
+                    <LegalStatusBadge member={member} legalTermsVersion={legalTermsVersion} />
+                  </td>
                   <td className="px-4 py-3">{formatDuration(member.remainingCredit)}</td>
                   <td className="px-4 py-3">{new Date(member.endDate).toLocaleDateString('fr-FR')}</td>
                   <td className="px-4 py-3">
@@ -242,6 +250,36 @@ function InfoLine({ label, value }: { label: string; value: string }) {
       <span>{label}</span>
       <span className="text-right font-medium text-neutral-200">{value}</span>
     </div>
+  );
+}
+
+function LegalStatusBadge({ member, legalTermsVersion }: { member: Member; legalTermsVersion: string }) {
+  const acceptedCurrentVersion = Boolean(member.termsAcceptedAt && member.termsAcceptedVersion === legalTermsVersion);
+  const acceptedOldVersion = Boolean(member.termsAcceptedAt && member.termsAcceptedVersion !== legalTermsVersion);
+
+  if (acceptedCurrentVersion) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-xs font-semibold text-emerald-200">
+        <CheckCircle2 size={13} />
+        Acceptées
+      </span>
+    );
+  }
+
+  if (acceptedOldVersion) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-400/10 px-2.5 py-1 text-xs font-semibold text-amber-200">
+        <ShieldAlert size={13} />
+        À accepter
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-red-400/25 bg-red-400/10 px-2.5 py-1 text-xs font-semibold text-red-200">
+      <ShieldAlert size={13} />
+      Non acceptées
+    </span>
   );
 }
 
